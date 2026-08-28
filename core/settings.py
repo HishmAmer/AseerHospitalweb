@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-kn-@%idya*ms!dbtko(@*o#%8s#zubfbb8j(9908+@*jhf=1=')
 
 # إذا كنا على السيرفر الحقيقي، يمكنك جعل DJANGO_DEBUG=False لتفعيل وضع الإنتاج والأمان
-DEBUG = False
+DEBUG = True
 # النطاقات المسموح بها (يقبل الكل للسيرفر الداخلي أو الشبكة المحلية)
 ALLOWED_HOSTS = ['*'] if DEBUG else ['*']
 
