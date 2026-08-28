@@ -1,0 +1,86 @@
+{% extends 'employees/base.html' %}
+{% block title %}أرشيف الموظفين{% endblock %}
+{% block page_title %}أرشيف الموظفين (سلة المحذوفات){% endblock %}
+
+{% block content %}
+<style>
+    /* SaaS Table Design */
+    .saas-panel { background-color: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
+    .saas-panel-header { padding: 20px 24px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; }
+    .saas-panel-title { font-size: 1.05rem; font-weight: 600; color: var(--text-main); margin: 0; }
+    
+    .saas-table { width: 100%; margin: 0; border-collapse: collapse; }
+    .saas-table th { background-color: #F8FAFC; color: var(--text-secondary); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; padding: 12px 24px; border-bottom: 1px solid var(--border-light); }
+    .saas-table td { padding: 16px 24px; border-bottom: 1px solid var(--border-light); color: var(--text-secondary); font-size: 0.9rem; vertical-align: middle; transition: background-color 0.2s ease; opacity: 0.85; /* شفافية خفيفة للدلالة على الأرشيف */ }
+    .saas-table tbody tr:hover td { background-color: var(--bg-surface-hover); opacity: 1; }
+    .text-main-bold { color: var(--text-main); font-weight: 600; }
+
+    /* Action Buttons */
+    .action-btn { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); border: none; transition: all 0.2s ease; cursor: pointer; }
+    .btn-restore { color: var(--color-success); background-color: var(--color-success-subtle); }
+    .btn-restore:hover { background-color: var(--color-success); color: white; }
+    .btn-hard-delete { color: var(--color-danger); background-color: var(--color-danger-subtle); }
+    .btn-hard-delete:hover { background-color: var(--color-danger); color: white; }
+</style>
+
+<div class="saas-panel">
+    <div class="saas-panel-header">
+        <h2 class="saas-panel-title"><i class="fas fa-archive text-muted me-2"></i> الموظفين المؤرشفين</h2>
+    </div>
+
+    <div class="table-responsive">
+        <table class="saas-table">
+            <thead>
+                <tr>
+                    <th>الموظف</th>
+                    <th>رقم الموظف</th>
+                    <th>المنشأة والقسم</th>
+                    <th class="text-end">الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in employees %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center gap-3">
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background-color: #E2E8F0; display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--text-secondary);">
+                                <i class="fas fa-user-slash"></i>
+                            </div>
+                            <div>
+                                <div class="text-main-bold text-decoration-line-through text-muted">{{ emp.full_name }}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-tertiary);">{{ emp.contract_job_title.name }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-family: monospace;">{{ emp.employee_number }}</td>
+                    <td>
+                        <div class="text-main-bold">{{ emp.current_workplace.name }}</div>
+                        <div style="font-size: 0.8rem;">{{ emp.current_department.name }}</div>
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'restore_employee' emp.pk %}" class="action-btn btn-restore" title="استعادة للسجل النشط" onclick="return confirm('هل أنت متأكد من استعادة هذا الموظف للعمل؟');">
+                            <i class="fas fa-undo"></i>
+                        </a>
+                        {% if request.user.is_superuser %}
+                        <a href="{% url 'hard_delete_employee' emp.pk %}" class="action-btn btn-hard-delete ms-2" title="حذف نهائي" onclick="return confirm('تحذير: سيتم مسح هذا الموظف نهائياً من قاعدة البيانات ولن يمكنك استعادته. هل أنت متأكد؟');">
+                            <i class="fas fa-times"></i>
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center py-5">
+                        <div style="color: var(--text-tertiary); max-width: 300px; margin: 0 auto;">
+                            <i class="fas fa-box-open mb-3" style="font-size: 3rem; opacity: 0.5;"></i>
+                            <h6 class="text-main-bold">الأرشيف فارغ</h6>
+                            <p style="font-size: 0.85rem;">لا يوجد أي موظفين محذوفين في الوقت الحالي.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

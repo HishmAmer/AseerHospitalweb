@@ -1,0 +1,163 @@
+{% extends 'employees/base.html' %}
+{% block title %}صلاحيات النظام{% endblock %}
+{% block page_title %}إدارة المستخدمين والصلاحيات{% endblock %}
+
+{% block content %}
+<style>
+    /* =========================================
+       تحديثات التصميم الفاخر (Premium UI)
+       ========================================= */
+    .premium-panel { 
+        background-color: #ffffff; 
+        border-radius: 1.5rem; 
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04); 
+        overflow: hidden; 
+        border: none; 
+    }
+    
+    .premium-panel-header { 
+        padding: 24px 32px; 
+        border-bottom: 1px solid #f1f5f9; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+    }
+    
+    .premium-panel-title { 
+        font-size: 1.25rem; 
+        font-weight: 800; 
+        color: #0f172a; 
+        margin: 0; 
+        display: flex; 
+        align-items: center; 
+        gap: 12px; 
+    }
+    
+    .icon-circle {
+        width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+    }
+
+    /* زر الإضافة الفاخر */
+    .btn-premium-primary { 
+        border-radius: 1rem; padding: 10px 24px; font-weight: 700; background-color: #4F46E5; color: white; border: none; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; transition: all 0.3s ease;
+    }
+    .btn-premium-primary:hover { 
+        background-color: #4338CA; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(79, 70, 229, 0.3); color: white;
+    }
+
+    /* تصميم الجدول الفاخر */
+    .premium-table { width: 100%; margin: 0; border-collapse: separate; border-spacing: 0; }
+    .premium-table th { 
+        background-color: #ffffff; 
+        color: #64748b; 
+        font-size: 0.85rem; 
+        font-weight: 800; 
+        text-transform: uppercase; 
+        padding: 16px 32px; 
+        border-bottom: 2px solid #f1f5f9; 
+        white-space: nowrap; 
+    }
+    .premium-table td { 
+        padding: 20px 32px; 
+        border-bottom: 1px solid #f8fafc; 
+        color: #475569; 
+        font-size: 0.95rem; 
+        vertical-align: middle; 
+        transition: background-color 0.2s ease; 
+    }
+    .premium-table tbody tr:hover td { background-color: #f8fafc; }
+
+    /* البادجات (الصلاحيات والحالة) */
+    .role-badge { padding: 8px 14px; border-radius: 12px; font-size: 0.85rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+    .badge-admin { background-color: #EEF2FF; color: #4F46E5; }
+    .badge-user { background-color: #F1F5F9; color: #64748B; }
+    
+    .status-pill { padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-block; text-align: center; min-width: 80px;}
+    .status-active { background-color: #ecfdf5; color: #10B981; }
+    .status-inactive { background-color: #fef2f2; color: #EF4444; }
+
+    /* أزرار الإجراءات (دوائر) */
+    .action-circle { 
+        width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #f1f5f9; color: #64748b; transition: all 0.2s ease; text-decoration: none; border: none; 
+    }
+    .action-circle:hover { background: #4F46E5; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
+</style>
+
+<div class="premium-panel">
+    <div class="premium-panel-header">
+        <h2 class="premium-panel-title">
+            <div class="icon-circle shadow-sm" style="background-color: #ffffff; color: #4F46E5;">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            مستخدمي النظام
+        </h2>
+        <a href="{% url 'add_user' %}" class="btn-premium-primary">
+            <i class="fas fa-user-plus"></i> مستخدم جديد
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="premium-table">
+            <thead>
+                <tr>
+                    <th>الاسم</th>
+                    <th>اسم المستخدم (Login)</th>
+                    <th>نوع الصلاحية</th>
+                    <th>حالة الحساب</th>
+                    <th>تاريخ الانضمام</th>
+                    <th class="text-end" style="padding-left: 32px;">الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center gap-3">
+                            <div style="width: 42px; height: 42px; border-radius: 50%; background-color: #EEF2FF; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; color: #4F46E5;">
+                                {{ u.username|make_list|first|upper }}
+                            </div>
+                            <div style="font-weight: 800; color: #0f172a;">{{ u.first_name|default:"-" }} {{ u.last_name|default:"" }}</div>
+                        </div>
+                    </td>
+                    <td style="font-family: monospace; font-size: 1rem; font-weight: 600; color: #64748b;">{{ u.username }}</td>
+                    <td>
+                        {% if u.is_superuser %}
+                            <span class="role-badge badge-admin"><i class="fas fa-crown text-warning"></i> مدير نظام (Admin)</span>
+                        {% else %}
+                            <span class="role-badge badge-user"><i class="fas fa-user"></i> مستخدم فرع</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.is_active %}
+                            <span class="status-pill status-active">نشط</span>
+                        {% else %}
+                            <span class="status-pill status-inactive">معطل</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size: 0.9rem; color: #64748b; font-weight: 600;">
+                        {{ u.date_joined|date:"Y/m/d" }}
+                    </td>
+                    <td class="text-end" style="padding-left: 32px;">
+                        <a href="{% url 'edit_user' u.pk %}" class="action-circle" title="تعديل الصلاحيات">
+                            <i class="fas fa-sliders-h"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5">
+                        <div style="color: #94a3b8; max-width: 300px; margin: 40px auto;">
+                            <div class="icon-circle mx-auto mb-3" style="background-color: #f1f5f9; width: 80px; height: 80px; font-size: 2.5rem; color: #cbd5e1;">
+                                <i class="fas fa-users-slash"></i>
+                            </div>
+                            <h6 style="font-weight: 800; color: #0f172a; font-size: 1.1rem;">لا يوجد مستخدمين</h6>
+                            <p style="font-size: 0.95rem; margin-top: 8px;">لم يتم إضافة أي مستخدمين إضافيين للنظام بعد.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,267 @@
+{% extends 'employees/base.html' %}
+{% block title %}لوحة القيادة{% endblock %}
+{% block page_title %}نظرة عامة ومؤشرات الأداء{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    .welcome-banner { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 32px; border-radius: 1.5rem; box-shadow: 0 15px 30px -10px rgba(15, 23, 42, 0.3); margin-bottom: 32px; position: relative; overflow: hidden; }
+    .welcome-banner::after { content: '\f108'; font-family: 'Font Awesome 5 Free'; font-weight: 900; position: absolute; left: -20px; bottom: -40px; font-size: 12rem; opacity: 0.03; transform: rotate(-15deg); }
+    .section-title { font-size: 1.15rem; font-weight: 800; color: #1e293b; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .premium-card { background-color: #ffffff; border: none; border-radius: 1.5rem; padding: 24px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04); transition: all 0.3s ease; height: 100%; position: relative; overflow: hidden; }
+    .premium-card:hover { transform: translateY(-5px); box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.08); }
+    .card-header-flex { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+    .icon-circle { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+    .premium-value { font-size: 2rem; font-weight: 800; color: #0f172a; margin: 0; line-height: 1; }
+    .premium-label { font-size: 0.95rem; font-weight: 700; color: #64748b; margin-top: 8px; }
+    .saas-alert { border-radius: 1.25rem; border: none; padding: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.04); }
+    .alert-danger-saas { background-color: #FEF2F2; color: #991B1B; }
+    .alert-warning-saas { background-color: #FFFBEB; color: #92400E; }
+    .alert-list { margin: 0; padding-right: 20px; font-size: 0.85rem; font-weight: 600; line-height: 1.8; }
+    .chart-box { background-color: #ffffff; border-radius: 1.5rem; padding: 32px 24px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04); height: 100%; display: flex; flex-direction: column; align-items: center; }
+    .chart-wrapper { position: relative; height: 260px; width: 100%; margin-bottom: 10px; }
+    .chart-center-text { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }
+    .chart-center-text h2 { margin: 0 0 4px 0; font-size: 2.8rem; font-weight: 900; color: #0f172a; line-height: 1; }
+    .chart-center-text span { font-size: 0.95rem; font-weight: 700; color: #64748b; display: block; }
+</style>
+
+<div class="welcome-banner">
+    <h3 class="fw-bold mb-2">مرحباً بك، {{ request.user.first_name|default:request.user.username }} ✨</h3>
+    <p class="mb-0 text-white-50" style="font-size: 1.05rem;">نطاق العمل الحالي: <span class="badge bg-white text-dark ms-1 px-3 py-2 rounded-pill shadow-sm">{{ workplace_name }}</span></p>
+</div>
+
+<!-- تنبيهات العقود والتصنيفات (نفس الكود السابق) -->
+{% if expired_count > 0 or expiring_soon_count > 0 %}
+<div class="row g-4 mb-4">
+    {% if expired_count > 0 %}
+    <div class="col-md-6">
+        <div class="saas-alert alert-danger-saas">
+            <div class="d-flex align-items-center mb-3"><div class="icon-circle me-3" style="background: rgba(220, 38, 38, 0.1); width: 40px; height: 40px; font-size:1.1rem;"><i class="fas fa-exclamation-triangle"></i></div><h6 class="mb-0 fw-bold fs-5">عقود منتهية ({{ expired_count }})</h6></div>
+            <ul class="alert-list">
+                {% for emp in expired_employees|slice:":3" %}
+                <li>{{ emp.full_name }} <span class="ms-1 opacity-75">(انتهى: {{ emp.contract_end_date|date:"Y/m/d" }})</span></li>
+                {% endfor %}
+                {% if expired_count > 3 %}<li class="mt-2"><a href="{% url 'employee_list' %}" style="color: inherit; text-decoration: underline;">عرض كل العقود المنتهية...</a></li>{% endif %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+    {% if expiring_soon_count > 0 %}
+    <div class="col-md-6">
+        <div class="saas-alert alert-warning-saas">
+            <div class="d-flex align-items-center mb-3"><div class="icon-circle me-3" style="background: rgba(217, 119, 6, 0.1); width: 40px; height: 40px; font-size:1.1rem;"><i class="fas fa-clock"></i></div><h6 class="mb-0 fw-bold fs-5">عقود تنتهي قريباً ({{ expiring_soon_count }})</h6></div>
+            <ul class="alert-list">
+                {% for emp in expiring_soon_employees|slice:":3" %}
+                <li>{{ emp.full_name }} <span class="ms-1 opacity-75">(ينتهي: {{ emp.contract_end_date|date:"Y/m/d" }})</span></li>
+                {% endfor %}
+                {% if expiring_soon_count > 3 %}<li class="mt-2"><a href="{% url 'employee_list' %}" style="color: inherit; text-decoration: underline;">عرض باقي القائمة...</a></li>{% endif %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if expired_class_count > 0 or expiring_soon_class_count > 0 %}
+<div class="row g-4 mb-5">
+    {% if expired_class_count > 0 %}
+    <div class="col-md-6">
+        <div class="saas-alert" style="background-color: #FEF2F2; color: #991B1B;">
+            <div class="d-flex align-items-center mb-3">
+                <div class="icon-circle me-3" style="background: rgba(220, 38, 38, 0.1); width: 40px; height: 40px; font-size:1.1rem;"><i class="fas fa-id-card-alt"></i></div>
+                <h6 class="mb-0 fw-bold fs-5">تصنيفات منتهية ({{ expired_class_count }})</h6>
+            </div>
+            <ul class="alert-list">
+                {% for emp in expired_classifications|slice:":3" %}
+                <li>{{ emp.full_name }} <span class="ms-1 opacity-75">(انتهى: {{ emp.classification_expiry_date|date:"Y/m/d" }})</span></li>
+                {% endfor %}
+                {% if expired_class_count > 3 %}<li class="mt-2"><a href="{% url 'employee_list' %}" style="color: inherit; text-decoration: underline;">عرض الكل...</a></li>{% endif %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+    {% if expiring_soon_class_count > 0 %}
+    <div class="col-md-6">
+        <div class="saas-alert" style="background-color: #EEF2FF; color: #3730A3;">
+            <div class="d-flex align-items-center mb-3">
+                <div class="icon-circle me-3" style="background: rgba(79, 70, 229, 0.1); width: 40px; height: 40px; font-size:1.1rem;"><i class="fas fa-certificate"></i></div>
+                <h6 class="mb-0 fw-bold fs-5">تصنيفات تنتهي قريباً ({{ expiring_soon_class_count }})</h6>
+            </div>
+            <ul class="alert-list">
+                {% for emp in expiring_soon_classifications|slice:":3" %}
+                <li>{{ emp.full_name }} <span class="ms-1 opacity-75">(ينتهي: {{ emp.classification_expiry_date|date:"Y/m/d" }})</span></li>
+                {% endfor %}
+                {% if expiring_soon_class_count > 3 %}<li class="mt-2"><a href="{% url 'employee_list' %}" style="color: inherit; text-decoration: underline;">عرض الكل...</a></li>{% endif %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- ==========================================
+     كروت النظرة العامة
+     ========================================== -->
+<h5 class="section-title"><i class="fas fa-chart-pie text-primary fs-4"></i> نظرة عامة</h5>
+<div class="row g-4 mb-5">
+    <div class="col-md-6 col-lg-3">
+        <div class="premium-card">
+            <div class="card-header-flex"><div class="icon-circle" style="background-color: #E0F2FE; color: #0284C7;"><i class="fas fa-users"></i></div></div>
+            <h3 class="premium-value">{{ total_employees }}</h3>
+            <p class="premium-label">إجمالي النشطين</p>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="premium-card">
+            <div class="card-header-flex"><div class="icon-circle" style="background-color: #F0FDF4; color: #16A34A;"><i class="fas fa-male"></i></div></div>
+            <h3 class="premium-value">{{ male_count }}</h3>
+            <p class="premium-label">ذكور (نشط)</p>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="premium-card">
+            <div class="card-header-flex"><div class="icon-circle" style="background-color: #FEF2F2; color: #DC2626;"><i class="fas fa-female"></i></div></div>
+            <h3 class="premium-value">{{ female_count }}</h3>
+            <p class="premium-label">إناث (نشط)</p>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="premium-card">
+            <div class="card-header-flex"><div class="icon-circle" style="background-color: #FEF9C3; color: #CA8A04;"><i class="fas fa-umbrella-beach"></i></div></div>
+            <h3 class="premium-value">{{ on_leave_count }}</h3>
+            <p class="premium-label">في إجازة حالياً</p>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     كروت الكادر الطبي (تم ربطها بـ employee_category)
+     ========================================== -->
+<h5 class="section-title"><i class="fas fa-user-md text-primary fs-4"></i> الكادر الطبي النشط</h5>
+<div class="row g-4 mb-5">
+    <div class="col-md-3">
+        <div class="premium-card" style="background: linear-gradient(180deg, #ffffff 0%, #F0F9FF 100%);">
+            <div class="card-header-flex"><div class="icon-circle shadow-sm" style="background-color: #ffffff; color: #3B82F6;"><i class="fas fa-stethoscope"></i></div></div>
+            <h3 class="premium-value text-primary">{{ resident_count }}</h3>
+            <p class="premium-label">طبيب مقيم</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="premium-card" style="background: linear-gradient(180deg, #ffffff 0%, #ECFDF5 100%);">
+            <div class="card-header-flex"><div class="icon-circle shadow-sm" style="background-color: #ffffff; color: #10B981;"><i class="fas fa-user-nurse"></i></div></div>
+            <h3 class="premium-value text-success">{{ registrar_count }}</h3>
+            <p class="premium-label">طبيب نائب</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="premium-card" style="background: linear-gradient(180deg, #ffffff 0%, #FFFBEB 100%);">
+            <div class="card-header-flex"><div class="icon-circle shadow-sm" style="background-color: #ffffff; color: #F59E0B;"><i class="fas fa-medal"></i></div></div>
+            <h3 class="premium-value text-warning">{{ senior_registrar_count }}</h3>
+            <p class="premium-label">نائب أول</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="premium-card" style="background: linear-gradient(180deg, #ffffff 0%, #F5F3FF 100%);">
+            <div class="card-header-flex"><div class="icon-circle shadow-sm" style="background-color: #ffffff; color: #8B5CF6;"><i class="fas fa-star-of-life"></i></div></div>
+            <h3 class="premium-value" style="color: #8B5CF6;">{{ consultant_count }}</h3>
+            <p class="premium-label">استشاري</p>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     كروت تفاصيل الحالات الجديدة والرسم البياني
+     ========================================== -->
+<h5 class="section-title"><i class="fas fa-tasks text-primary fs-4"></i> تفاصيل الحالات</h5>
+<div class="row g-4 mb-4">
+    <div class="col-lg-7">
+        <div class="row g-4">
+            <!-- 1. نشط -->
+            <div class="col-md-6">
+                <div class="premium-card">
+                    <div class="card-header-flex"><div class="icon-circle" style="background-color: #d1fae5; color: #059669;"><i class="fas fa-check"></i></div></div>
+                    <h3 class="premium-value">{{ active_count }}</h3>
+                    <p class="premium-label">على رأس العمل (نشط)</p>
+                </div>
+            </div>
+            <!-- 2. مستقيل -->
+            <div class="col-md-6">
+                <div class="premium-card">
+                    <div class="card-header-flex"><div class="icon-circle" style="background-color: #fef3c7; color: #d97706;"><i class="fas fa-door-open"></i></div></div>
+                    <h3 class="premium-value">{{ resigned_count }}</h3>
+                    <p class="premium-label">مستقيل</p>
+                </div>
+            </div>
+            <!-- 3. طي القيد -->
+            <div class="col-md-6">
+                <div class="premium-card">
+                    <div class="card-header-flex"><div class="icon-circle" style="background-color: #fef2f2; color: #e11d48;"><i class="fas fa-ban"></i></div></div>
+                    <h3 class="premium-value">{{ terminated_count }}</h3>
+                    <p class="premium-label">طي القيد</p>
+                </div>
+            </div>
+            <!-- 4. إيفاد -->
+            <div class="col-md-6">
+                <div class="premium-card">
+                    <div class="card-header-flex"><div class="icon-circle" style="background-color: #EFF6FF; color: #2563EB;"><i class="fas fa-plane-departure"></i></div></div>
+                    <h3 class="premium-value">{{ delegated_count }}</h3>
+                    <p class="premium-label">إيفاد</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- الرسم البياني الدائري (Chart) -->
+    <div class="col-lg-5">
+        <div class="chart-box">
+            <h5 class="fw-bold text-dark mb-4">توزيع الحالات الكلي</h5>
+            <div class="chart-wrapper">
+                <canvas id="statusChart"></canvas>
+                <div class="chart-center-text">
+                    <h2>{{ total_all }}</h2>
+                    <span>إجمالي السجلات</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var ctx = document.getElementById('statusChart').getContext('2d');
+        var statusChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                // تحديث مسميات الحالات
+                labels: ['نشط', 'مستقيل', 'طي القيد', 'إيفاد'],
+                datasets: [{
+                    // ربط المتغيرات الصحيحة
+                    data: [{{ active_count }}, {{ resigned_count }}, {{ terminated_count }}, {{ delegated_count }}],
+                    // تخصيص الألوان (أخضر، برتقالي، أحمر، أزرق)
+                    backgroundColor: ['#10B981', '#F59E0B', '#EF4444', '#3B82F6'],
+                    borderWidth: 0,
+                    hoverOffset: 10,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '82%', 
+                plugins: {
+                    legend: { 
+                        position: 'bottom', 
+                        rtl: true, 
+                        labels: { font: { family: 'Cairo, sans-serif', size: 14, weight: 'bold' }, usePointStyle: true, padding: 25, color: '#475569' } 
+                    },
+                    tooltip: { 
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)', 
+                        titleFont: { family: 'Cairo', size: 14 }, 
+                        bodyFont: { family: 'Cairo', size: 14, weight: 'bold' }, 
+                        padding: 12, cornerRadius: 10, boxPadding: 6 
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

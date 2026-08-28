@@ -1,0 +1,278 @@
+{% extends 'employees/base.html' %}
+{% block title %}تعديل الموظف{% endblock %}
+{% block page_title %}تعديل الموظف{% endblock %}
+
+{% block content %}
+<style>
+    .premium-form-wrapper { background-color: #ffffff; border-radius: 1.5rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04); max-width: 950px; margin: 0 auto; overflow: hidden; border: none; }
+    .premium-form-header { padding: 32px; background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%); border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+    .premium-form-title { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0; }
+    .premium-form-subtitle { font-size: 0.9rem; color: #64748b; margin-top: 6px; font-weight: 600; }
+    .premium-form-body { padding: 0; }
+    .form-section { padding: 32px; border-bottom: 1px solid #f1f5f9; }
+    .form-section:last-child { border-bottom: none; }
+    .section-title { font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+    .section-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .form-label { font-size: 0.9rem; font-weight: 700; color: #475569; margin-bottom: 8px; }
+    .form-control, .form-select { border-radius: 1rem !important; border: 1px solid #e2e8f0 !important; padding: 12px 16px !important; font-size: 0.95rem !important; font-weight: 600 !important; color: #0f172a !important; background-color: #ffffff !important; box-shadow: 0 2px 4px rgba(0,0,0,0.01) !important; transition: all 0.2s ease !important; }
+    .form-control:focus, .form-select:focus { border-color: #4F46E5 !important; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1) !important; background-color: #ffffff !important; outline: none !important; }
+    .premium-switch-box { padding: 20px 24px; background-color: #f8fafc; border-radius: 1rem; border: 1px solid #e2e8f0; }
+    .form-switch .form-check-input { width: 3em; height: 1.5em; cursor: pointer; }
+    .form-switch .form-check-input:checked { background-color: #4F46E5; border-color: #4F46E5; }
+    .form-footer { padding: 24px 32px; background-color: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 16px; }
+    .btn-premium { border-radius: 1rem; padding: 12px 24px; font-weight: 700; transition: all 0.3s ease; border: none; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; cursor: pointer; }
+    .btn-premium-primary { background-color: #4F46E5; color: white; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
+    .btn-premium-primary:hover { background-color: #4338CA; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(79, 70, 229, 0.3); color: white; }
+    .btn-premium-outline { background-color: #ffffff; color: #475569; border: 1px solid #e2e8f0; }
+    .btn-premium-outline:hover { background-color: #f1f5f9; color: #0f172a; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+
+{% if form.errors %}
+<div class="alert alert-danger" style="max-width: 950px; margin: 0 auto 24px; border-radius: 1.25rem; background-color: #FEF2F2; border: none; color: #991B1B; padding: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.04);">
+    <strong class="d-block mb-2 fs-6"><i class="fas fa-exclamation-circle me-2"></i>يرجى مراجعة الأخطاء التالية:</strong>
+    <ul class="mb-0" style="font-size: 0.9rem; font-weight: 600; line-height: 1.8;">
+        {% for field in form %}
+            {% for error in field.errors %}
+                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+            {% endfor %}
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<form method="POST" class="premium-form-wrapper">
+    {% csrf_token %}
+    
+    <div class="premium-form-header">
+        <div>
+            <h2 class="premium-form-title">إضافة / تعديل بيانات موظف</h2>
+            <p class="premium-form-subtitle">أدخل المعلومات الأساسية والمهنية بعناية لإنشاء السجل.</p>
+        </div>
+        <a href="{% url 'employee_list' %}" class="btn-premium btn-premium-outline">
+            <i class="fas fa-times"></i> إلغاء
+        </a>
+    </div>
+
+    <div class="premium-form-body">
+        
+        <!-- القسم الأول: المعلومات الشخصية -->
+        <div class="form-section">
+            <h3 class="section-title">
+                <div class="section-icon" style="background-color: #E0F2FE; color: #0284C7;"><i class="fas fa-id-card-alt"></i></div>
+                المعلومات الشخصية
+            </h3>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.full_name.label }}</label>
+                    {{ form.full_name }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ form.national_id.label }}</label>
+                    {{ form.national_id }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ form.employee_number.label }}</label>
+                    {{ form.employee_number }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.nationality.label }}</label>
+                    {{ form.nationality }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.dob.label }}</label>
+                    {{ form.dob }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.gender.label }}</label>
+                    {{ form.gender }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.mobile_number.label }}</label>
+                    {{ form.mobile_number }}
+                </div>
+            </div>
+        </div>
+
+        <!-- القسم الثاني: التعيين والتخصص -->
+        <div class="form-section">
+            <h3 class="section-title">
+                <div class="section-icon" style="background-color: #F0FDF4; color: #16A34A;"><i class="fas fa-briefcase"></i></div>
+                التعيين والتخصص
+            </h3>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.workplace_type.label }}</label>
+                    {{ form.workplace_type }}
+                </div>
+                
+                <div class="col-md-4" id="time-type-box" style="display: none;">
+                    <label class="form-label" style="color: #16A34A;">{{ form.time_type.label }}</label>
+                    {{ form.time_type }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.current_workplace.label }}</label>
+                    {{ form.current_workplace }}
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.current_department.label }}</label>
+                    {{ form.current_department }}
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.status.label }}</label>
+                    {{ form.status }}
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.general_specialty.label }}</label>
+                    {{ form.general_specialty }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.has_sub_specialty.label }}</label>
+                    {{ form.has_sub_specialty }}
+                </div>
+
+                <div class="col-md-4" id="sub-specialty-box" style="display: none;">
+                    <label class="form-label" style="color: #4F46E5;">{{ form.sub_specialty.label }}</label>
+                    {{ form.sub_specialty }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.is_classified.label }}</label>
+                    {{ form.is_classified }}
+                </div>
+                
+                <div class="col-md-4" id="class-expiry-box" style="display: none;">
+                    <label class="form-label" style="color: #4F46E5;"><i class="fas fa-calendar-check me-1"></i> {{ form.classification_expiry_date.label }}</label>
+                    {{ form.classification_expiry_date }}
+                </div>
+            </div>
+        </div>
+
+        <!-- القسم الثالث: العقد والتكليف الإداري -->
+        <div class="form-section">
+            <h3 class="section-title">
+                <div class="section-icon" style="background-color: #FEF3C7; color: #D97706;"><i class="fas fa-file-signature"></i></div>
+                العقد والتكليف الإداري
+            </h3>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.employee_type.label }}</label>
+                    {{ form.employee_type }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.employee_category.label }}</label>
+                    {{ form.employee_category }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.contract_job_title.label }}</label>
+                    {{ form.contract_job_title }}
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.contract_start_date.label }}</label>
+                    {{ form.contract_start_date }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.contract_end_date.label }}</label>
+                    {{ form.contract_end_date }}
+                </div>
+                
+                <div class="col-12 mt-4">
+                    <div class="premium-switch-box">
+                        <div class="form-check form-switch fs-5 mb-0 d-flex align-items-center">
+                            {{ form.is_admin_assigned }}
+                            <label class="form-check-label ms-3 fw-bold" style="color: #0f172a; cursor: pointer;" for="{{ form.is_admin_assigned.id_for_label }}">{{ form.is_admin_assigned.label }}</label>
+                        </div>
+                        <div id="admin-details-box" class="mt-4" style="display: none;">
+                            <label class="form-label">{{ form.admin_work_details.label }}</label>
+                            {{ form.admin_work_details }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="form-footer">
+        <button type="submit" class="btn-premium btn-premium-primary px-5">
+            <i class="fas fa-check-circle"></i> حفظ بيانات الموظف
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // 1. التكليف الإداري
+        const adminToggle = document.getElementById('id_is_admin_assigned');
+        const adminBox = document.getElementById('admin-details-box');
+        const detailsInput = document.getElementById('id_admin_work_details');
+
+        function toggleAdminBox() {
+            if (adminToggle.checked) {
+                adminBox.style.display = 'block';
+                adminBox.style.animation = 'fadeIn 0.3s ease-in-out';
+            } else {
+                adminBox.style.display = 'none';
+                if (detailsInput) detailsInput.value = '';
+            }
+        }
+        if(adminToggle) { toggleAdminBox(); adminToggle.addEventListener('change', toggleAdminBox); }
+        
+        // 2. التصنيف المهني
+        const classifiedSelect = document.getElementById('id_is_classified');
+        const classExpiryBox = document.getElementById('class-expiry-box');
+        const classExpiryInput = document.getElementById('id_classification_expiry_date');
+
+        function toggleClassExpiry() {
+            if (classifiedSelect.value === 'مصنف') {
+                classExpiryBox.style.display = 'block';
+                classExpiryBox.style.animation = 'fadeIn 0.3s ease-in-out';
+            } else {
+                classExpiryBox.style.display = 'none';
+                if (classExpiryInput) classExpiryInput.value = ''; 
+            }
+        }
+        if(classifiedSelect) { toggleClassExpiry(); classifiedSelect.addEventListener('change', toggleClassExpiry); }
+        
+        // 3. نوع المنشأة والتفرغ
+        const wpTypeSelect = document.getElementById('id_workplace_type');
+        const timeTypeBox = document.getElementById('time-type-box');
+        const timeTypeInput = document.getElementById('id_time_type');
+
+        function toggleTimeType() {
+            if (wpTypeSelect.value === 'مدن طبية' || wpTypeSelect.value === 'جامعة الملك خالد') {
+                timeTypeBox.style.display = 'block';
+                timeTypeBox.style.animation = 'fadeIn 0.3s ease-in-out';
+            } else {
+                timeTypeBox.style.display = 'none';
+                if (timeTypeInput) timeTypeInput.value = '';
+            }
+        }
+        if(wpTypeSelect) { toggleTimeType(); wpTypeSelect.addEventListener('change', toggleTimeType); }
+
+        // 4. التخصص الدقيق
+        const hasSubSelect = document.getElementById('id_has_sub_specialty');
+        const subSpecBox = document.getElementById('sub-specialty-box');
+        const subSpecInput = document.getElementById('id_sub_specialty');
+
+        function toggleSubSpec() {
+            if (hasSubSelect.value === 'نعم') {
+                subSpecBox.style.display = 'block';
+                subSpecBox.style.animation = 'fadeIn 0.3s ease-in-out';
+            } else {
+                subSpecBox.style.display = 'none';
+                if (subSpecInput) subSpecInput.value = '';
+            }
+        }
+        if(hasSubSelect) { toggleSubSpec(); hasSubSelect.addEventListener('change', toggleSubSpec); }
+    });
+</script>
+{% endblock %}

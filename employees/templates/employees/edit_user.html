@@ -1,0 +1,233 @@
+{% extends 'employees/base.html' %}
+{% block title %}تعديل الصلاحيات{% endblock %}
+{% block page_title %}تعديل بيانات المستخدم{% endblock %}
+
+{% block content %}
+<style>
+    /* =========================================
+       تحديثات التصميم الفاخر (Premium UI)
+       ========================================= */
+    .premium-form-wrapper {
+        background-color: #ffffff;
+        border-radius: 1.5rem;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04);
+        max-width: 800px; 
+        margin: 0 auto;
+        overflow: hidden;
+        border: none;
+    }
+
+    .premium-form-header {
+        padding: 32px;
+        background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .premium-form-title { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 12px; }
+    .premium-form-subtitle { font-size: 0.95rem; color: #64748b; margin-top: 6px; font-weight: 600; }
+    .premium-form-body { padding: 32px; }
+
+    .icon-circle-lg {
+        width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+    }
+
+    /* عناوين الأقسام */
+    .section-label { 
+        font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; 
+    }
+    .section-label-icon {
+        width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem;
+    }
+
+    /* حقول الإدخال */
+    .form-label { font-size: 0.9rem; font-weight: 700; color: #475569; margin-bottom: 8px; }
+    .premium-input {
+        border-radius: 1rem; border: 1px solid #e2e8f0; padding: 12px 16px; font-size: 0.95rem; font-weight: 600; color: #0f172a; width: 100%; transition: all 0.2s; background-color: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+    }
+    .premium-input:focus { border-color: #4F46E5; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); outline: none; }
+
+    /* =========================================
+       RADIO CARDS DESIGN (Premium SaaS Style)
+       ========================================= */
+    .radio-card-group { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
+    
+    .radio-card {
+        position: relative;
+        border: 2px solid #f1f5f9;
+        border-radius: 1.25rem;
+        padding: 24px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background-color: #ffffff;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+    .radio-card:hover { border-color: #cbd5e1; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
+    
+    .radio-card input[type="radio"] { position: absolute; opacity: 0; }
+    
+    /* عند اختيار الكارت العادي (أزرق/Indigo) */
+    .radio-card:has(input[type="radio"]:checked) {
+        border-color: #4F46E5;
+        background-color: #EEF2FF;
+        box-shadow: 0 10px 20px rgba(79, 70, 229, 0.1);
+    }
+    .radio-card:has(input[type="radio"]:checked) .rc-icon { background-color: #4F46E5; color: white; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); }
+    
+    /* عند اختيار كارت الخطر (Danger Card - أحمر) */
+    .radio-card.danger-card:has(input[type="radio"]:checked) { 
+        border-color: #EF4444; 
+        background-color: #FEF2F2; 
+        box-shadow: 0 10px 20px rgba(239, 68, 68, 0.1);
+    }
+    .radio-card.danger-card:has(input[type="radio"]:checked) .rc-icon { background-color: #EF4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); }
+    
+    /* عند اختيار كارت الأمان (Success Card - أخضر) */
+    .radio-card.success-card:has(input[type="radio"]:checked) { 
+        border-color: #10B981; 
+        background-color: #ECFDF5; 
+        box-shadow: 0 10px 20px rgba(16, 185, 129, 0.1);
+    }
+    .radio-card.success-card:has(input[type="radio"]:checked) .rc-icon { background-color: #10B981; color: white; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+
+    /* تصميم المحتوى داخل الكارت */
+    .radio-card-content { display: flex; gap: 16px; align-items: flex-start; }
+    .rc-icon { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; background-color: #f1f5f9; color: #94a3b8; transition: all 0.3s; flex-shrink: 0;}
+    
+    .rc-title { font-weight: 800; color: #0f172a; font-size: 1.05rem; margin-bottom: 6px; line-height: 1.2;}
+    .rc-desc { font-size: 0.85rem; color: #64748b; line-height: 1.6; font-weight: 600;}
+    
+    /* الأزرار */
+    .form-footer { padding: 24px 32px; background-color: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 16px; }
+    .btn-premium { border-radius: 1rem; padding: 12px 24px; font-weight: 700; transition: all 0.3s ease; border: none; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; cursor: pointer; }
+    .btn-premium-primary { background-color: #4F46E5; color: white; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
+    .btn-premium-primary:hover { background-color: #4338CA; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(79, 70, 229, 0.3); color: white; }
+    .btn-premium-outline { background-color: #ffffff; color: #475569; border: 1px solid #e2e8f0; }
+    .btn-premium-outline:hover { background-color: #f1f5f9; color: #0f172a; }
+</style>
+
+<form method="POST" class="premium-form-wrapper">
+    {% csrf_token %}
+    
+    <div class="premium-form-header">
+        <div>
+            <h2 class="premium-form-title">
+                <div class="icon-circle-lg shadow-sm" style="background-color: #ffffff; color: #4F46E5;">
+                    <i class="fas fa-user-cog"></i>
+                </div>
+                إعدادات حساب: {{ target_user.first_name }} {{ target_user.last_name }}
+            </h2>
+            <p class="premium-form-subtitle">اسم الدخول: <span style="font-family: monospace; background:#f1f5f9; padding: 2px 8px; border-radius: 6px; color:#0f172a;">{{ target_user.username }}</span></p>
+        </div>
+        <a href="{% url 'user_list' %}" class="btn-premium btn-premium-outline"><i class="fas fa-times"></i> إلغاء</a>
+    </div>
+
+    <div class="premium-form-body">
+    <!-- القسم صفر: بيانات الدخول (جديد) -->
+        <div class="section-label">
+            <div class="section-label-icon" style="background: #E0F2FE; color: #0284C7;"><i class="fas fa-key"></i></div>
+            بيانات الدخول
+        </div>
+        <div class="row g-4 mb-5">
+            <div class="col-md-6">
+                <label class="form-label">اسم المستخدم (Login Username)</label>
+                <input type="text" name="username" class="premium-input" style="font-family: monospace;" value="{{ target_user.username }}" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">تغيير كلمة المرور</label>
+                <input type="password" name="password" class="premium-input" placeholder="اتركه فارغاً للاحتفاظ بكلمة المرور الحالية...">
+            </div>
+        </div>
+        
+        <!-- القسم الأول: ربط المنشأة -->
+        <div class="section-label">
+            <div class="section-label-icon" style="background: #E0F2FE; color: #0284C7;"><i class="fas fa-building"></i></div>
+            المنشأة التابع لها
+        </div>
+        <div class="row mb-5">
+            <div class="col-md-12">
+                <label class="form-label">حدد المنشأة التي يديرها هذا المستخدم (تؤثر على المستخدم العادي فقط)</label>
+                <select name="workplace" class="premium-input">
+                    <option value="">-- إدارة عامة (مدير نظام) --</option>
+                    {% for wp in workplaces %}
+                        <option value="{{ wp.id }}" {% if target_user.profile.workplace and target_user.profile.workplace.id == wp.id %}selected{% endif %}>
+                            {{ wp.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- القسم الثاني: مستوى الصلاحية -->
+        <div class="section-label">
+            <div class="section-label-icon" style="background: #FEF3C7; color: #D97706;"><i class="fas fa-shield-alt"></i></div>
+            مستوى الصلاحيات (Role)
+        </div>
+        <div class="radio-card-group">
+            <!-- كارت المستخدم العادي -->
+            <label class="radio-card">
+                <input type="radio" name="role" value="user" {% if not target_user.is_superuser %}checked{% endif %}>
+                <div class="radio-card-content">
+                    <div class="rc-icon"><i class="fas fa-user"></i></div>
+                    <div>
+                        <div class="rc-title">مستخدم عادي / فرع</div>
+                        <div class="rc-desc">صلاحيات محدودة. يمكنه إدارة الموظفين والإجازات في نطاق فرعه فقط ولا يمكنه الوصول للإعدادات.</div>
+                    </div>
+                </div>
+            </label>
+            
+            <!-- كارت المدير -->
+            <label class="radio-card">
+                <input type="radio" name="role" value="admin" {% if target_user.is_superuser %}checked{% endif %}>
+                <div class="radio-card-content">
+                    <div class="rc-icon"><i class="fas fa-crown"></i></div>
+                    <div>
+                        <div class="rc-title">مدير نظام (Admin)</div>
+                        <div class="rc-desc">صلاحيات مطلقة. يمكنه رؤية جميع الفروع، إدارة الإعدادات، والتحكم بجميع الحسابات.</div>
+                    </div>
+                </div>
+            </label>
+        </div>
+
+        <!-- القسم الثالث: حالة الحساب -->
+        <div class="section-label mt-5">
+            <div class="section-label-icon" style="background: #F1F5F9; color: #475569;"><i class="fas fa-power-off"></i></div>
+            حالة الحساب (Status)
+        </div>
+        <div class="radio-card-group mb-0">
+            <!-- كارت نشط -->
+            <label class="radio-card success-card">
+                <input type="radio" name="status" value="active" {% if target_user.is_active %}checked{% endif %}>
+                <div class="radio-card-content">
+                    <div class="rc-icon"><i class="fas fa-check"></i></div>
+                    <div>
+                        <div class="rc-title">حساب نشط</div>
+                        <div class="rc-desc">يسمح للمستخدم بتسجيل الدخول واستخدام النظام بشكل طبيعي وبكامل صلاحياته.</div>
+                    </div>
+                </div>
+            </label>
+            
+            <!-- كارت معطل -->
+            <label class="radio-card danger-card">
+                <input type="radio" name="status" value="inactive" {% if not target_user.is_active %}checked{% endif %}>
+                <div class="radio-card-content">
+                    <div class="rc-icon"><i class="fas fa-ban"></i></div>
+                    <div>
+                        <div class="rc-title text-danger">حساب معطل (إيقاف)</div>
+                        <div class="rc-desc">لن يتمكن هذا المستخدم من الدخول للنظام نهائياً حتى يتم تنشيط الحساب مرة أخرى.</div>
+                    </div>
+                </div>
+            </label>
+        </div>
+
+    </div>
+
+    <div class="form-footer">
+        <button type="submit" class="btn-premium btn-premium-primary px-5">
+            <i class="fas fa-save"></i> حفظ وتحديث الصلاحيات
+        </button>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends 'employees/base.html' %}
+{% block title %}تسجيل إجازة{% endblock %}
+{% block page_title %}تسجيل إجازة جديدة{% endblock %}
+
+{% block content %}
+<style>
+    /* =========================================
+       تحديثات التصميم الفاخر للنماذج (Premium Forms)
+       ========================================= */
+    .premium-form-wrapper {
+        background-color: #ffffff; border-radius: 1.5rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04); max-width: 800px; margin: 0 auto; overflow: hidden; border: none;
+    }
+
+    .premium-form-header {
+        padding: 32px; background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%); border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;
+    }
+    
+    .premium-form-title { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 10px;}
+    .premium-form-subtitle { font-size: 0.9rem; color: #64748b; margin-top: 6px; font-weight: 600; }
+
+    .form-section { padding: 32px; }
+
+    /* تصميم الحقول */
+    .form-label { font-size: 0.9rem; font-weight: 700; color: #475569; margin-bottom: 8px; }
+    
+    .form-control, .form-select {
+        border-radius: 1rem !important; border: 1px solid #e2e8f0 !important; padding: 12px 16px !important; font-size: 0.95rem !important; font-weight: 600 !important; color: #0f172a !important; background-color: #ffffff !important; box-shadow: 0 2px 4px rgba(0,0,0,0.01) !important; transition: all 0.2s ease !important;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #4F46E5 !important; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1) !important; outline: none !important;
+    }
+
+    .form-footer {
+        padding: 24px 32px; background-color: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 16px;
+    }
+
+    /* الأزرار (السر هنا لحل مشكلة الصورة) */
+    .btn-premium { 
+        border-radius: 1rem; padding: 12px 24px; font-weight: 700; transition: all 0.3s ease; border: none; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; cursor: pointer; font-family: inherit;
+    }
+    .btn-premium-primary { background-color: #4F46E5; color: white; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
+    .btn-premium-primary:hover { background-color: #4338CA; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(79, 70, 229, 0.3); color: white; }
+    .btn-premium-outline { background-color: #ffffff; color: #475569; border: 1px solid #e2e8f0; }
+    .btn-premium-outline:hover { background-color: #f1f5f9; color: #0f172a; }
+</style>
+
+{% if form.errors %}
+<div class="alert alert-danger" style="max-width: 800px; margin: 0 auto 24px; border-radius: 1.25rem; background-color: #FEF2F2; border: none; color: #991B1B; padding: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.04);">
+    <strong class="d-block mb-2 fs-6"><i class="fas fa-exclamation-circle me-2"></i>يرجى مراجعة الأخطاء التالية:</strong>
+    <ul class="mb-0" style="font-size: 0.9rem; font-weight: 600; line-height: 1.8;">
+        {% for field in form %}
+            {% for error in field.errors %}
+                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+            {% endfor %}
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<form method="POST" class="premium-form-wrapper">
+    {% csrf_token %}
+    
+    <div class="premium-form-header">
+        <div>
+            <h2 class="premium-form-title">
+                <div class="icon-circle shadow-sm" style="background-color: #ffffff; color: #CA8A04; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-left: 10px;">
+                    <i class="fas fa-umbrella-beach"></i>
+                </div>
+                تسجيل إجازة جديدة
+            </h2>
+            <p class="premium-form-subtitle">أدخل بيانات الإجازة وتأكد من صحة التواريخ.</p>
+        </div>
+        <a href="{% url 'leave_list' %}" class="btn-premium btn-premium-outline">
+            <i class="fas fa-times"></i> إلغاء
+        </a>
+    </div>
+
+    <div class="form-section">
+        <div class="row g-4">
+            <div class="col-md-12">
+                <label class="form-label">{{ form.employee.label }}</label>
+                {{ form.employee }}
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">{{ form.leave_type.label }}</label>
+                {{ form.leave_type }}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">{{ form.start_date.label }}</label>
+                {{ form.start_date }}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">{{ form.end_date.label }}</label>
+                {{ form.end_date }}
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">{{ form.notes.label }}</label>
+                {{ form.notes }}
+            </div>
+        </div>
+    </div>
+
+    <div class="form-footer">
+        <button type="submit" class="btn-premium btn-premium-primary px-5">
+            <i class="fas fa-check-circle"></i> حفظ الإجازة
+        </button>
+    </div>
+</form>
+{% endblock %}

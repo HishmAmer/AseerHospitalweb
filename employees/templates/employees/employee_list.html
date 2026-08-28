@@ -1,0 +1,169 @@
+{% extends 'employees/base.html' %}
+{% block title %}قائمة الموظفين{% endblock %}
+{% block page_title %}إدارة الموظفين{% endblock %}
+
+{% block content %}
+<style>
+    .premium-panel { background-color: #ffffff; border-radius: 1.5rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04); overflow: hidden; border: none; }
+    .premium-panel-header { padding: 24px 32px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+    .premium-panel-title { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 12px; }
+    .btn-premium { border-radius: 1rem; padding: 10px 20px; font-weight: 700; transition: all 0.3s ease; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
+    .btn-premium-primary { background-color: #4F46E5; color: white; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
+    .btn-premium-primary:hover { background-color: #4338CA; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(79, 70, 229, 0.3); color: white; }
+    .btn-premium-success { background-color: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; }
+    .btn-premium-success:hover { background-color: #10b981; color: white; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(16, 185, 129, 0.2); }
+    .btn-premium-outline { background-color: #ffffff; color: #475569; border: 1px solid #e2e8f0; }
+    .btn-premium-outline:hover { background-color: #f1f5f9; color: #0f172a; }
+    .filter-section { background-color: #f8fafc; padding: 24px 32px; border-bottom: 1px solid #f1f5f9; }
+    .premium-input { border-radius: 1rem; border: 1px solid #e2e8f0; padding: 12px 20px; background-color: white; color: #0f172a; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.02); width: 100%; transition: all 0.2s; }
+    .premium-input:focus { border-color: #4F46E5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); outline: none; }
+    .input-group-premium { display: flex; border-radius: 1rem; overflow: hidden; border: 1px solid #e2e8f0; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.2s; }
+    .input-group-premium:focus-within { border-color: #4F46E5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+    .input-group-premium .input-group-text { background: transparent; border: none; color: #94a3b8; padding-right: 20px; padding-left: 10px; }
+    .input-group-premium input { border: none; background: transparent; box-shadow: none; padding: 12px 20px 12px 10px; width: 100%; font-weight: 600; color: #0f172a; }
+    .input-group-premium input:focus { outline: none; }
+    .premium-table { width: 100%; margin: 0; border-collapse: separate; border-spacing: 0; }
+    .premium-table th { background-color: #ffffff; color: #64748b; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; padding: 16px 32px; border-bottom: 2px solid #f1f5f9; white-space: nowrap; }
+    .premium-table td { padding: 20px 32px; border-bottom: 1px solid #f8fafc; color: #475569; font-size: 0.95rem; vertical-align: middle; transition: background-color 0.2s ease; }
+    .premium-table tbody tr:hover td { background-color: #f8fafc; }
+    .status-badge { padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-block; text-align: center; min-width: 80px; }
+    .status-active { background-color: #ecfdf5; color: #10B981; }
+    .status-resigned { background-color: #fffbeb; color: #F59E0B; }
+    .status-suspended { background-color: #fef2f2; color: #EF4444; }
+    .status-terminated { background-color: #f1f5f9; color: #64748B; }
+    .action-circle { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #f1f5f9; color: #64748b; transition: all 0.2s ease; text-decoration: none; border: none; }
+    .action-circle:hover { background: #4F46E5; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
+    .action-circle-danger:hover { background: #EF4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); }
+</style>
+
+<div class="premium-panel">
+    <div class="premium-panel-header">
+        <h2 class="premium-panel-title">
+            <div class="icon-circle" style="background-color: #E0F2FE; color: #0284C7; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fas fa-users"></i>
+            </div>
+            قائمة الموظفين
+        </h2>
+        <div class="d-flex gap-3">
+            <a href="{% url 'export_employees_excel' %}?{{ request.GET.urlencode }}" class="btn-premium btn-premium-success">
+                <i class="fas fa-file-excel"></i> تصدير Excel
+            </a>
+            <a href="{% url 'add_employee' %}" class="btn-premium btn-premium-primary">
+                <i class="fas fa-plus"></i> إضافة موظف
+            </a>
+        </div>
+    </div>
+
+    <div class="filter-section">
+        <form method="GET" action="{% url 'employee_list' %}" class="row g-3 align-items-center">
+            <div class="col-md-4">
+                <div class="input-group-premium">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" name="search" placeholder="ابحث بالاسم، الهوية، أو الرقم..." value="{{ search_query }}">
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <select name="status" class="premium-input form-select border-0" style="box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e2e8f0 !important;">
+                    <option value="">كل الحالات</option>
+                    <option value="نشط" {% if status_filter == 'نشط' %}selected{% endif %}>نشط</option>
+                    <option value="مستقيل" {% if status_filter == 'مستقيل' %}selected{% endif %}>مستقيل</option>
+                    <option value="طي القيد" {% if status_filter == 'طي القيد' %}selected{% endif %}>طي القيد</option>
+                    <option value="إيفاد" {% if status_filter == 'إيفاد' %}selected{% endif %}>إيفاد</option>
+                </select>
+            </div>
+
+            {% if workplaces %}
+            <div class="col-md-3">
+                <select name="workplace" class="premium-input form-select border-0" style="box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e2e8f0 !important;">
+                    <option value="">كل المنشآت</option>
+                    {% for wp in workplaces %}
+                    <option value="{{ wp.id }}" {% if workplace_filter == wp.id|stringformat:"s" %}selected{% endif %}>{{ wp.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn-premium btn-premium-primary w-100">تصفية</button>
+                {% if search_query or status_filter or workplace_filter %}
+                <a href="{% url 'employee_list' %}" class="btn-premium btn-premium-outline w-100" title="مسح الفلاتر">إلغاء</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="premium-table">
+            <thead>
+                <tr>
+                    <th>الرقم الوظيفي</th>
+                    <th>الاسم / العمر</th>
+                    <th>المنشأة والقسم</th>
+                    <th>فئة الموظف / المسمى</th>
+                    <th>الحالة</th>
+                    <th class="text-end" style="padding-left: 32px;">الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for employee in employees %}
+                <tr>
+                    <td style="font-weight: 800; color: #0f172a;">{{ employee.employee_number|default:"-" }}</td>
+                    <td>
+                        <div style="font-weight: 700; color: #0f172a;">{{ employee.full_name }}</div>
+                        <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
+                            <i class="far fa-user me-1"></i> العمر: {{ employee.age|default:"غير محدد" }}
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600;">{{ employee.current_workplace.name|default:"-" }}</div>
+                        <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
+                            <i class="fas fa-sitemap me-1"></i> {{ employee.current_department.name|default:"-" }}
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600;">{{ employee.employee_category|default:"-" }}</div>
+                        <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
+                            <i class="fas fa-tag me-1"></i> {{ employee.contract_job_title|default:"-" }}
+                        </div>
+                    </td>
+                    <td>
+                        {% if employee.status == 'نشط' %}
+                            <span class="status-badge status-active">نشط</span>
+                        {% elif employee.status == 'مستقيل' %}
+                            <span class="status-badge status-resigned">مستقيل</span>
+                        {% elif employee.status == 'طي القيد' %}
+                            <span class="status-badge status-suspended">طي القيد</span>
+                        {% else %}
+                            <span class="status-badge status-terminated">إيفاد</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end" style="padding-left: 32px;">
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'edit_employee' employee.pk %}" class="action-circle" title="تعديل البيانات">
+                                <i class="fas fa-pen"></i>
+                            </a>
+                            <a href="{% url 'delete_employee' employee.pk %}" class="action-circle action-circle-danger" title="حذف (نقل للأرشيف)" onclick="return confirm('هل أنت متأكد من نقل الموظف للأرشيف؟');">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5">
+                        <div style="color: #94a3b8; max-width: 300px; margin: 40px auto;">
+                            <div class="icon-circle mx-auto mb-3" style="background-color: #f1f5f9; width: 80px; height: 80px; font-size: 2.5rem; color: #cbd5e1;">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <h6 style="font-weight: 800; color: #0f172a; font-size: 1.1rem;">لا توجد نتائج</h6>
+                            <p style="font-size: 0.95rem; margin-top: 8px;">لم نتمكن من العثور على أي موظف مطابق لبحثك.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
