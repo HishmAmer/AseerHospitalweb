@@ -1,5 +1,5 @@
 from django import forms
-from .models import Employee, Leave, Workplace
+from .models import Employee, Leave, Workplace, UserProfile
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
@@ -108,3 +108,54 @@ class LeaveForm(forms.ModelForm):
             if end_date < start_date:
                 raise ValidationError("خطأ: تاريخ نهاية الإجازة لا يمكن أن يكون قبل تاريخ بدايتها!")
         return cleaned_data
+
+class AccountCreationForm(UserCreationForm):
+    is_superuser = forms.BooleanField(
+        required=False, 
+        label='منح صلاحيات الإدارة (أدمن)',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    workplace = forms.ModelChoiceField(
+        queryset=Workplace.objects.all(),
+        required=False,
+        label='المنشأة التابع لها',
+        empty_label='--- اختر المنشأة ---',
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    class Meta:
+        model = User
+        fields = ('username', 'is_superuser')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            if isinstance(field.widget, forms.TextInput) or isinstance(field.widget, forms.PasswordInput):
+                field.widget.attrs['class'] = 'form-control'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        is_superuser = cleaned_data.get('is_superuser')
+        workplace = cleaned_data.get('workplace')
+
+        if is_superuser and workplace:
+            self.add_error('workplace', 'حساب الإدارة (الأدمن) لا يجب أن يرتبط بمنشأة محددة.')
+            
+        if not is_superuser and not workplace:
+            self.add_error('workplace', 'إجباري: يجب اختيار المنشأة للحسابات الفرعية.')
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.is_superuser = self.cleaned_data.get('is_superuser')
+        
+        if user.is_superuser:
+            user.is_staff = True 
+        
+        if commit:
+            user.save()
+            workplace = self.cleaned_data.get('workplace')
+            UserProfile.objects.create(user=user, workplace=workplace)
+            
+        return user
