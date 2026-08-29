@@ -178,7 +178,7 @@
 
         /* Logout Action */
         .logout-btn {
-            width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--color-danger-subtle); color: var(--color-danger); transition: all 0.3s ease;
+            width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--color-danger-subtle); color: var(--color-danger); transition: all 0.3s ease; border: none; cursor: pointer; padding: 0;
         }
         .logout-btn:hover { background: var(--color-danger); color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); }
 
@@ -269,9 +269,12 @@
                     </div>
                     
                     <!-- Logout Action -->
-                    <a href="{% url 'logout' %}" class="logout-btn" title="تسجيل خروج">
-                        <i class="fas fa-sign-out-alt m-0"></i>
-                    </a>
+                    <form method="POST" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="logout-btn" title="تسجيل خروج">
+                            <i class="fas fa-sign-out-alt m-0"></i>
+                        </button>
+                    </form>
                 </div>
             </header>
 

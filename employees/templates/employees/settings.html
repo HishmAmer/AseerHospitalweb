@@ -17,7 +17,7 @@
     .settings-list-item:hover { background-color: #f8fafc; }
     .settings-list-item:last-child { border-bottom: none; }
     .item-name { font-size: 0.95rem; font-weight: 700; color: #475569; }
-    .action-circle-danger { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #f1f5f9; color: #94a3b8; transition: all 0.2s ease; text-decoration: none; border: none; cursor: pointer; }
+    .action-circle-danger { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #f1f5f9; color: #94a3b8; transition: all 0.2s ease; text-decoration: none; border: none; cursor: pointer; padding: 0; }
     .action-circle-danger:hover { background: #FEF2F2; color: #EF4444; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(239, 68, 68, 0.15); }
     .btn-premium-sm { border-radius: 1rem; padding: 8px 16px; font-weight: 700; font-size: 0.85rem; transition: all 0.3s ease; border: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; text-decoration: none; }
     .btn-premium-primary { background-color: #4F46E5; color: white; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
@@ -39,7 +39,10 @@
                 {% for item in workplaces %}
                 <li class="settings-list-item">
                     <span class="item-name">{{ item.name }}</span>
-                    <a href="{% url 'delete_setting_item' 'workplace' item.pk %}" class="action-circle-danger" onclick="return confirm('تأكيد الحذف؟')"><i class="fas fa-trash-alt"></i></a>
+                    <form method="POST" action="{% url 'delete_setting_item' 'workplace' item.pk %}" onsubmit="return confirm('تأكيد الحذف؟');">
+                        {% csrf_token %}
+                        <button type="submit" class="action-circle-danger"><i class="fas fa-trash-alt"></i></button>
+                    </form>
                 </li>
                 {% empty %}
                 <li class="settings-list-item text-muted justify-content-center py-4">لا توجد بيانات</li>
@@ -62,7 +65,10 @@
                 {% for item in general_specialties %}
                 <li class="settings-list-item">
                     <span class="item-name">{{ item.name }}</span>
-                    <a href="{% url 'delete_setting_item' 'general_specialty' item.pk %}" class="action-circle-danger" onclick="return confirm('تأكيد الحذف؟')"><i class="fas fa-trash-alt"></i></a>
+                    <form method="POST" action="{% url 'delete_setting_item' 'general_specialty' item.pk %}" onsubmit="return confirm('تأكيد الحذف؟');">
+                        {% csrf_token %}
+                        <button type="submit" class="action-circle-danger"><i class="fas fa-trash-alt"></i></button>
+                    </form>
                 </li>
                 {% empty %}
                 <li class="settings-list-item text-muted justify-content-center py-4">لا توجد بيانات</li>
@@ -85,7 +91,10 @@
                 {% for item in sub_specialties %}
                 <li class="settings-list-item">
                     <span class="item-name">{{ item.name }}</span>
-                    <a href="{% url 'delete_setting_item' 'sub_specialty' item.pk %}" class="action-circle-danger" onclick="return confirm('تأكيد الحذف؟')"><i class="fas fa-trash-alt"></i></a>
+                    <form method="POST" action="{% url 'delete_setting_item' 'sub_specialty' item.pk %}" onsubmit="return confirm('تأكيد الحذف؟');">
+                        {% csrf_token %}
+                        <button type="submit" class="action-circle-danger"><i class="fas fa-trash-alt"></i></button>
+                    </form>
                 </li>
                 {% empty %}
                 <li class="settings-list-item text-muted justify-content-center py-4">لا توجد بيانات</li>
@@ -108,7 +117,10 @@
                 {% for item in departments %}
                 <li class="settings-list-item">
                     <span class="item-name">{{ item.name }}</span>
-                    <a href="{% url 'delete_setting_item' 'department' item.pk %}" class="action-circle-danger" onclick="return confirm('تأكيد الحذف؟')"><i class="fas fa-trash-alt"></i></a>
+                    <form method="POST" action="{% url 'delete_setting_item' 'department' item.pk %}" onsubmit="return confirm('تأكيد الحذف؟');">
+                        {% csrf_token %}
+                        <button type="submit" class="action-circle-danger"><i class="fas fa-trash-alt"></i></button>
+                    </form>
                 </li>
                 {% empty %}
                 <li class="settings-list-item text-muted justify-content-center py-4">لا توجد بيانات</li>

@@ -16,7 +16,7 @@
     .text-main-bold { color: var(--text-main); font-weight: 600; }
 
     /* Action Buttons */
-    .action-btn { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); border: none; transition: all 0.2s ease; cursor: pointer; }
+    .action-btn { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); border: none; transition: all 0.2s ease; cursor: pointer; padding: 0; }
     .btn-restore { color: var(--color-success); background-color: var(--color-success-subtle); }
     .btn-restore:hover { background-color: var(--color-success); color: white; }
     .btn-hard-delete { color: var(--color-danger); background-color: var(--color-danger-subtle); }
@@ -58,14 +58,22 @@
                         <div style="font-size: 0.8rem;">{{ emp.current_department.name }}</div>
                     </td>
                     <td class="text-end">
-                        <a href="{% url 'restore_employee' emp.pk %}" class="action-btn btn-restore" title="استعادة للسجل النشط" onclick="return confirm('هل أنت متأكد من استعادة هذا الموظف للعمل؟');">
-                            <i class="fas fa-undo"></i>
-                        </a>
-                        {% if request.user.is_superuser %}
-                        <a href="{% url 'hard_delete_employee' emp.pk %}" class="action-btn btn-hard-delete ms-2" title="حذف نهائي" onclick="return confirm('تحذير: سيتم مسح هذا الموظف نهائياً من قاعدة البيانات ولن يمكنك استعادته. هل أنت متأكد؟');">
-                            <i class="fas fa-times"></i>
-                        </a>
-                        {% endif %}
+                        <div class="d-inline-flex gap-2 align-items-center">
+                            <form method="POST" action="{% url 'restore_employee' emp.pk %}" onsubmit="return confirm('هل أنت متأكد من استعادة هذا الموظف للعمل؟');">
+                                {% csrf_token %}
+                                <button type="submit" class="action-btn btn-restore" title="استعادة للسجل النشط">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                            </form>
+                            {% if request.user.is_superuser %}
+                            <form method="POST" action="{% url 'hard_delete_employee' emp.pk %}" onsubmit="return confirm('تحذير: سيتم مسح هذا الموظف نهائياً من قاعدة البيانات ولن يمكنك استعادته. هل أنت متأكد؟');">
+                                {% csrf_token %}
+                                <button type="submit" class="action-btn btn-hard-delete" title="حذف نهائي">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% empty %}

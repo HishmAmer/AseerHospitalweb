@@ -31,7 +31,7 @@
     .status-resigned { background-color: #fffbeb; color: #F59E0B; }
     .status-suspended { background-color: #fef2f2; color: #EF4444; }
     .status-terminated { background-color: #f1f5f9; color: #64748B; }
-    .action-circle { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #f1f5f9; color: #64748b; transition: all 0.2s ease; text-decoration: none; border: none; }
+    .action-circle { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #f1f5f9; color: #64748b; transition: all 0.2s ease; text-decoration: none; border: none; padding: 0; cursor: pointer; }
     .action-circle:hover { background: #4F46E5; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
     .action-circle-danger:hover { background: #EF4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); }
 </style>
@@ -143,9 +143,12 @@
                             <a href="{% url 'edit_employee' employee.pk %}" class="action-circle" title="تعديل البيانات">
                                 <i class="fas fa-pen"></i>
                             </a>
-                            <a href="{% url 'delete_employee' employee.pk %}" class="action-circle action-circle-danger" title="حذف (نقل للأرشيف)" onclick="return confirm('هل أنت متأكد من نقل الموظف للأرشيف؟');">
-                                <i class="fas fa-trash"></i>
-                            </a>
+                            <form method="POST" action="{% url 'delete_employee' employee.pk %}" onsubmit="return confirm('هل أنت متأكد من نقل الموظف للأرشيف؟');">
+                                {% csrf_token %}
+                                <button type="submit" class="action-circle action-circle-danger" title="حذف (نقل للأرشيف)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
                         </div>
                     </td>
                 </tr>

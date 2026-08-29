@@ -113,7 +113,7 @@
 
     /* أزرار الإجراءات (دوائر) */
     .action-circle { 
-        width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #f1f5f9; color: #64748b; transition: all 0.2s ease; text-decoration: none; border: none; 
+        width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #f1f5f9; color: #64748b; transition: all 0.2s ease; text-decoration: none; border: none; padding: 0; cursor: pointer;
     }
     .action-circle:hover { background: #4F46E5; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
     .action-circle-danger:hover { background: #EF4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); }
@@ -199,9 +199,12 @@
                                     <a href="{% url 'edit_leave' leave.pk %}" class="action-circle" title="تعديل">
                                         <i class="fas fa-pen"></i>
                                     </a>
-                                    <a href="{% url 'delete_leave' leave.pk %}" class="action-circle action-circle-danger" onclick="return confirm('هل أنت متأكد من إلغاء الإجازة وحذفها من السجل؟');" title="إلغاء الإجازة">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </a>
+                                    <form method="POST" action="{% url 'delete_leave' leave.pk %}" onsubmit="return confirm('هل أنت متأكد من إلغاء الإجازة وحذفها من السجل؟');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="action-circle action-circle-danger" title="إلغاء الإجازة">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>
