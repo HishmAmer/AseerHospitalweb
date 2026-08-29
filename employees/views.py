@@ -348,6 +348,15 @@ def add_user(request):
         status = request.POST.get('status')
         workplace_id = request.POST.get('workplace')
 
+        # 🆕 [1] التحقق من قاعدة المنشأة قبل الحفظ
+        if role == 'admin' and workplace_id:
+            messages.error(request, 'خطأ: حساب الإدارة (الأدمن) لا يجب أن يرتبط بمنشأة محددة.')
+            return redirect('add_user')
+            
+        if role != 'admin' and not workplace_id:
+            messages.error(request, 'إجباري: يجب اختيار المنشأة للحسابات الفرعية.')
+            return redirect('add_user')
+
         if User.objects.filter(username=username).exists():
             messages.error(request, 'اسم المستخدم هذا موجود مسبقاً!')
             return redirect('add_user')
@@ -375,6 +384,19 @@ def edit_user_permissions(request, pk):
     workplaces = Workplace.objects.all()
     
     if request.method == 'POST':
+        role = request.POST.get('role')
+        status = request.POST.get('status')
+        workplace_id = request.POST.get('workplace')
+        
+        # 🆕 [2] التحقق من قاعدة المنشأة قبل الحفظ لتجنب شاشة الخطأ
+        if role == 'admin' and workplace_id:
+            messages.error(request, 'خطأ: حساب الإدارة (الأدمن) لا يجب أن يرتبط بمنشأة محددة.')
+            return redirect('edit_user', pk=target_user.pk)
+            
+        if role != 'admin' and not workplace_id:
+            messages.error(request, 'إجباري: يجب اختيار المنشأة للحسابات الفرعية.')
+            return redirect('edit_user', pk=target_user.pk)
+
         new_username = request.POST.get('username')
         if new_username and new_username != target_user.username:
             if User.objects.filter(username=new_username).exists():
@@ -386,10 +408,6 @@ def edit_user_permissions(request, pk):
         if new_password:
             target_user.set_password(new_password)
             
-        role = request.POST.get('role')
-        status = request.POST.get('status')
-        workplace_id = request.POST.get('workplace')
-        
         if target_user == request.user and status == 'inactive':
             messages.error(request, 'عملية مرفوضة: لا يمكنك تعطيل حسابك الشخصي أثناء استخدامه!')
             return redirect('user_list')
@@ -420,9 +438,6 @@ def edit_user_permissions(request, pk):
         return redirect('user_list')
         
     return render(request, 'employees/edit_user.html', {'target_user': target_user, 'workplaces': workplaces})
-
-@login_required(login_url='login')
-@user_passes_test(lambda u: u.is_superuser)
 def system_settings(request):
     context = {
         'workplaces': Workplace.objects.all(),
