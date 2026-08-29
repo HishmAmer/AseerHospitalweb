@@ -16,6 +16,30 @@ def env_list(name):
     return [item.strip() for item in os.environ.get(name, '').split(',') if item.strip()]
 
 
+def as_hostname(value):
+    """Reduce a pasted URL to the bare hostname ALLOWED_HOSTS matches against.
+
+    'https://app.onrender.com/' and 'app.onrender.com:443' both become
+    'app.onrender.com'. Django compares ALLOWED_HOSTS against the Host header
+    with the port already stripped, so a scheme or trailing slash left in the
+    environment variable silently rejects every request with a bare 400.
+    """
+    host = value.split('://', 1)[-1].split('/', 1)[0].strip().rstrip('.').lower()
+    if host.startswith('['):  # bracketed IPv6 literal, e.g. [::1]:8000
+        return host.split(']', 1)[0] + ']'
+    return host.rsplit(':', 1)[0] if host.count(':') == 1 else host
+
+
+def as_origin(value, default_scheme):
+    """Ensure a CSRF trusted origin carries a scheme, as Django 4+ requires.
+
+    Django matches trusted origins as exact strings, so the scheme and host are
+    lowercased to keep a capitalised environment value from failing to match.
+    """
+    value = value.strip().rstrip('/').lower()
+    return value if '://' in value else f'{default_scheme}://{value}'
+
+
 # ==========================================
 # 1. إعدادات الأمان (Security)
 # ==========================================
@@ -31,7 +55,17 @@ if not SECRET_KEY:
         )
     SECRET_KEY = 'django-insecure-development-only-do-not-use-in-production'
 
-ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS')
+ALLOWED_HOSTS = [as_hostname(host) for host in env_list('DJANGO_ALLOWED_HOSTS')]
+
+# Render publishes the service's own hostname. Trusting it removes the most
+# common deployment failure: a mistyped DJANGO_ALLOWED_HOSTS turning every
+# request into a bare 400. Any other platform still configures it explicitly.
+PLATFORM_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME', '').strip()
+if PLATFORM_HOSTNAME:
+    PLATFORM_HOSTNAME = as_hostname(PLATFORM_HOSTNAME)
+    if PLATFORM_HOSTNAME not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(PLATFORM_HOSTNAME)
+
 if not ALLOWED_HOSTS:
     if not DEBUG:
         raise ImproperlyConfigured(
@@ -40,13 +74,20 @@ if not ALLOWED_HOSTS:
         )
     ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
 
-# Origins trusted for POST/CSRF, e.g. https://hr.aseer.local,http://10.0.0.15
-CSRF_TRUSTED_ORIGINS = env_list('DJANGO_CSRF_TRUSTED_ORIGINS')
-
 # Set DJANGO_SECURE_SSL=True once the site is served over HTTPS. It is off by
 # default because the internal deployment may still be plain HTTP, and marking
 # cookies Secure there would silently break every login.
 USE_HTTPS = env_bool('DJANGO_SECURE_SSL', False)
+
+# Origins trusted for POST/CSRF, e.g. https://hr.aseer.local,http://10.0.0.15
+CSRF_TRUSTED_ORIGINS = [
+    as_origin(origin, 'https' if USE_HTTPS else 'http')
+    for origin in env_list('DJANGO_CSRF_TRUSTED_ORIGINS')
+]
+if PLATFORM_HOSTNAME:
+    platform_origin = f'https://{PLATFORM_HOSTNAME}'
+    if platform_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(platform_origin)
 
 SESSION_COOKIE_SECURE = USE_HTTPS
 CSRF_COOKIE_SECURE = USE_HTTPS

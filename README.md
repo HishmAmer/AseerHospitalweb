@@ -42,12 +42,15 @@ gunicorn core.wsgi:application --bind 0.0.0.0:8000
 | المتغير | القيمة |
 | --- | --- |
 | `DJANGO_SECRET_KEY` | مفتاح مولّد (لا تضعه في المستودع) |
-| `DJANGO_ALLOWED_HOSTS` | `<اسم-المشروع>.onrender.com` — بدون `https://` أو `/` |
-| `DJANGO_CSRF_TRUSTED_ORIGINS` | `https://<اسم-المشروع>.onrender.com` |
 | `DJANGO_SECURE_SSL` | `True` |
 | `PYTHON_VERSION` | `3.13.7` |
 
 - **لا تضف `DJANGO_DEBUG`** — تركه غير مضبوط يعني `False`، وهو المطلوب.
+- `DJANGO_ALLOWED_HOSTS` و `DJANGO_CSRF_TRUSTED_ORIGINS` **غير مطلوبة على Render**:
+  يقرأ التطبيق `RENDER_EXTERNAL_HOSTNAME` الذي يضبطه Render تلقائياً ويضيفه
+  للنطاقات المسموح بها. اضبطهما فقط عند استخدام نطاق مخصص (custom domain).
+  القيم المكتوبة بـ `https://` أو `/` زائدة تُنظَّف تلقائياً، لأن ذلك كان يسبب
+  ردّ `Bad Request (400)` فارغاً على كل الطلبات.
 - `PYTHON_VERSION` ضروري: Render يستخدم Python 3.14 افتراضياً وهو غير مدعوم
   رسمياً في Django 5.2 (المدعوم 3.10–3.13).
 - اربط قاعدة بيانات Postgres ليضبط Render متغير `DATABASE_URL` تلقائياً. بدونها
