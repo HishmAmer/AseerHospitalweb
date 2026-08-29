@@ -3,162 +3,40 @@
 {% block page_title %}إدارة إجازات الموظفين{% endblock %}
 
 {% block content %}
-<style>
-    /* =========================================
-       تحديثات التصميم الفاخر (Premium UI)
-       ========================================= */
-    .premium-panel { 
-        background-color: #ffffff; 
-        border-radius: 1.5rem; 
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04); 
-        overflow: hidden; 
-        border: none; 
-    }
-    
-    .premium-panel-header { 
-        padding: 24px 32px 0; /* مسافة علوية فقط */
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center; 
-    }
-    
-    .premium-panel-title { 
-        font-size: 1.25rem; 
-        font-weight: 800; 
-        color: #0f172a; 
-        margin: 0; 
-        display: flex; 
-        align-items: center; 
-        gap: 12px; 
-    }
-    
-    .icon-circle {
-        width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
-    }
+<div class="panel">
 
-    /* التبويبات العائمة (Floating Tabs) */
-    .premium-tabs {
-        display: flex;
-        gap: 12px;
-        padding: 20px 32px;
-        border-bottom: 1px solid #f1f5f9;
-        margin: 0;
-    }
-    
-    .premium-tabs .nav-link {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 2rem;
-        color: #64748b;
-        font-weight: 700;
-        font-size: 0.95rem;
-        padding: 10px 24px;
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }
-    
-    .premium-tabs .nav-link:hover { 
-        background: #f1f5f9;
-        color: #0f172a;
-    }
-    
-    .premium-tabs .nav-link.active {
-        background: #4F46E5;
-        border-color: #4F46E5;
-        color: white;
-        box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
-    }
-    
-    .tab-badge {
-        background-color: rgba(255, 255, 255, 0.2);
-        color: white;
-        margin-right: 8px; /* RTL fix */
-        border-radius: 20px;
-        padding: 2px 8px;
-        font-size: 0.8rem;
-    }
-    .premium-tabs .nav-link:not(.active) .tab-badge {
-        background-color: #e2e8f0;
-        color: #475569;
-    }
-
-    /* تصميم الجدول الفاخر */
-    .premium-table { width: 100%; margin: 0; border-collapse: separate; border-spacing: 0; }
-    .premium-table th { 
-        background-color: #ffffff; 
-        color: #64748b; 
-        font-size: 0.85rem; 
-        font-weight: 800; 
-        text-transform: uppercase; 
-        padding: 16px 32px; 
-        border-bottom: 2px solid #f1f5f9; 
-        white-space: nowrap; 
-    }
-    .premium-table td { 
-        padding: 20px 32px; 
-        border-bottom: 1px solid #f8fafc; 
-        color: #475569; 
-        font-size: 0.95rem; 
-        vertical-align: middle; 
-        transition: background-color 0.2s ease; 
-    }
-    .premium-table tbody tr:hover td { background-color: #f8fafc; }
-
-    /* البادجات (أنواع الإجازات) */
-    .leave-badge { padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;}
-    .badge-annual { background-color: #E0F2FE; color: #0284C7; }
-    .badge-sick { background-color: #FEF2F2; color: #DC2626; }
-    .badge-emergency { background-color: #FFFBEB; color: #D97706; }
-    .badge-other { background-color: #F3F4F6; color: #4B5563; }
-
-    /* أزرار الإجراءات (دوائر) */
-    .action-circle { 
-        width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #f1f5f9; color: #64748b; transition: all 0.2s ease; text-decoration: none; border: none; padding: 0; cursor: pointer;
-    }
-    .action-circle:hover { background: #4F46E5; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
-    .action-circle-danger:hover { background: #EF4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); }
-    
-    /* زر الإضافة الفاخر */
-    .btn-premium-primary { 
-        border-radius: 1rem; padding: 10px 24px; font-weight: 700; background-color: #4F46E5; color: white; border: none; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; transition: all 0.3s ease;
-    }
-    .btn-premium-primary:hover { 
-        background-color: #4338CA; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(79, 70, 229, 0.3); color: white;
-    }
-</style>
-
-<div class="premium-panel">
-    <div class="premium-panel-header">
-        <h2 class="premium-panel-title">
-            <div class="icon-circle" style="background-color: #FEF9C3; color: #CA8A04;">
-                <i class="fas fa-umbrella-beach"></i>
-            </div>
+    <div class="panel-header">
+        <h2 class="panel-title">
+            <span class="tint tint-warn"><i class="fas fa-umbrella-beach"></i></span>
             سجل الإجازات
         </h2>
-        <a href="{% url 'add_leave' %}" class="btn-premium-primary">
+        <a href="{% url 'add_leave' %}" class="btn-app btn-primary-app">
             <i class="fas fa-plus"></i> تسجيل إجازة
         </a>
     </div>
 
-    <!-- التبويبات الفاخرة -->
-    <ul class="nav premium-tabs" id="leaveTabs" role="tablist">
+    <ul class="nav app-tabs" id="leaveTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab">
+            <button class="nav-link active" id="active-tab" data-bs-toggle="tab"
+                    data-bs-target="#active" type="button" role="tab"
+                    aria-controls="active" aria-selected="true">
                 الحالية والقادمة <span class="tab-badge">{{ active_leaves|length }}</span>
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
-                السجل التاريخي
+            <button class="nav-link" id="history-tab" data-bs-toggle="tab"
+                    data-bs-target="#history" type="button" role="tab"
+                    aria-controls="history" aria-selected="false">
+                السجل التاريخي <span class="tab-badge">{{ history_leaves|length }}</span>
             </button>
         </li>
     </ul>
 
-    <!-- محتوى التبويبات -->
     <div class="tab-content">
-        <!-- 1. الإجازات النشطة -->
-        <div class="tab-pane fade show active" id="active" role="tabpanel">
-            <div class="table-responsive">
+
+        <!-- ============ الإجازات الحالية ============ -->
+        <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
+            <div class="table-scroll">
                 <table class="premium-table">
                     <thead>
                         <tr>
@@ -166,43 +44,56 @@
                             <th>نوع الإجازة</th>
                             <th>المدة والتواريخ</th>
                             <th>ملاحظات</th>
-                            <th class="text-end" style="padding-left: 32px;">الإجراءات</th>
+                            <th class="text-start">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for leave in active_leaves %}
                         <tr>
                             <td>
-                                <div style="font-weight: 800; color: #0f172a;">{{ leave.employee.full_name }}</div>
-                                <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;"><i class="fas fa-sitemap me-1"></i> {{ leave.employee.current_department.name }}</div>
+                                <div class="cell-primary">{{ leave.employee.full_name }}</div>
+                                <div class="cell-secondary">
+                                    <i class="fas fa-sitemap"></i> {{ leave.employee.current_department.name|default:"—" }}
+                                </div>
                             </td>
+
                             <td>
                                 {% if leave.leave_type == 'سنوية' %}
-                                    <span class="leave-badge badge-annual"><i class="fas fa-plane-departure"></i> {{ leave.leave_type }}</span>
+                                    <span class="badge-app badge-info"><i class="fas fa-plane-departure"></i> {{ leave.leave_type }}</span>
                                 {% elif leave.leave_type == 'مرضية' %}
-                                    <span class="leave-badge badge-sick"><i class="fas fa-procedures"></i> {{ leave.leave_type }}</span>
+                                    <span class="badge-app badge-danger"><i class="fas fa-suitcase-medical"></i> {{ leave.leave_type }}</span>
                                 {% elif leave.leave_type == 'اضطرارية' %}
-                                    <span class="leave-badge badge-emergency"><i class="fas fa-exclamation-triangle"></i> {{ leave.leave_type }}</span>
+                                    <span class="badge-app badge-warn"><i class="fas fa-triangle-exclamation"></i> {{ leave.leave_type }}</span>
                                 {% else %}
-                                    <span class="leave-badge badge-other"><i class="fas fa-file-alt"></i> {{ leave.leave_type }}</span>
+                                    <span class="badge-app badge-neutral"><i class="fas fa-file-lines"></i> {{ leave.leave_type }}</span>
                                 {% endif %}
                             </td>
+
                             <td>
-                                <div style="font-weight: 800; color: #0f172a;">{{ leave.duration_days|default:"-" }} يوم</div>
-                                <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;"><i class="fas fa-calendar-alt me-1"></i> {{ leave.start_date|date:"Y/m/d" }} إلى {{ leave.end_date|date:"Y/m/d" }}</div>
+                                <div class="cell-primary">{{ leave.duration_days|default:"—" }} يوم</div>
+                                <div class="cell-secondary">
+                                    <i class="fas fa-calendar-days"></i>
+                                    {{ leave.start_date|date:"Y/m/d" }} — {{ leave.end_date|date:"Y/m/d" }}
+                                </div>
                             </td>
+
                             <td>
-                                <span class="d-inline-block text-truncate" style="max-width: 250px; color: #64748b;" title="{{ leave.notes }}">{{ leave.notes|default:"لا توجد ملاحظات" }}</span>
+                                <span class="d-inline-block text-truncate" style="max-width:220px; color:var(--text-muted);"
+                                      title="{{ leave.notes }}">{{ leave.notes|default:"—" }}</span>
                             </td>
-                            <td class="text-end" style="padding-left: 32px;">
-                                <div class="d-flex gap-2 justify-content-end">
-                                    <a href="{% url 'edit_leave' leave.pk %}" class="action-circle" title="تعديل">
+
+                            <td class="text-start">
+                                <div class="d-flex gap-2">
+                                    <a href="{% url 'edit_leave' leave.pk %}" class="action-circle"
+                                       title="تعديل" aria-label="تعديل إجازة {{ leave.employee.full_name }}">
                                         <i class="fas fa-pen"></i>
                                     </a>
-                                    <form method="POST" action="{% url 'delete_leave' leave.pk %}" onsubmit="return confirm('هل أنت متأكد من إلغاء الإجازة وحذفها من السجل؟');">
+                                    <form method="POST" action="{% url 'delete_leave' leave.pk %}"
+                                          onsubmit="return confirm('هل أنت متأكد من إلغاء الإجازة وحذفها من السجل؟');">
                                         {% csrf_token %}
-                                        <button type="submit" class="action-circle action-circle-danger" title="إلغاء الإجازة">
-                                            <i class="fas fa-trash-alt"></i>
+                                        <button type="submit" class="action-circle action-circle-danger"
+                                                title="إلغاء الإجازة" aria-label="إلغاء إجازة {{ leave.employee.full_name }}">
+                                            <i class="fas fa-trash-can"></i>
                                         </button>
                                     </form>
                                 </div>
@@ -210,13 +101,11 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="text-center py-5">
-                                <div style="color: #94a3b8; max-width: 350px; margin: 40px auto;">
-                                    <div class="icon-circle mx-auto mb-3" style="background-color: #f1f5f9; width: 80px; height: 80px; font-size: 2.5rem; color: #cbd5e1;">
-                                        <i class="fas fa-sun"></i>
-                                    </div>
-                                    <h6 style="font-weight: 800; color: #0f172a; font-size: 1.1rem;">لا توجد إجازات حالية</h6>
-                                    <p style="font-size: 0.95rem; margin-top: 8px;">لا يوجد موظفين في إجازة في الوقت الحالي أو في الفترة القادمة.</p>
+                            <td colspan="5">
+                                <div class="empty-state">
+                                    <div class="tint tint-neutral"><i class="fas fa-sun"></i></div>
+                                    <h6>لا توجد إجازات حالية</h6>
+                                    <p>لا يوجد موظفون في إجازة الآن أو في الفترة القادمة.</p>
                                 </div>
                             </td>
                         </tr>
@@ -226,9 +115,9 @@
             </div>
         </div>
 
-        <!-- 2. السجل التاريخي -->
-        <div class="tab-pane fade" id="history" role="tabpanel">
-            <div class="table-responsive">
+        <!-- ============ السجل التاريخي ============ -->
+        <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+            <div class="table-scroll">
                 <table class="premium-table">
                     <thead>
                         <tr>
@@ -240,21 +129,23 @@
                     <tbody>
                         {% for leave in history_leaves %}
                         <tr>
+                            <td class="cell-primary">{{ leave.employee.full_name }}</td>
                             <td>
-                                <div style="font-weight: 800; color: #0f172a;">{{ leave.employee.full_name }}</div>
+                                <span class="badge-app badge-neutral">{{ leave.leave_type }}</span>
+                                <div class="cell-secondary">
+                                    <i class="fas fa-clock-rotate-left"></i>
+                                    {{ leave.start_date|date:"Y/m/d" }} — {{ leave.end_date|date:"Y/m/d" }}
+                                </div>
                             </td>
-                            <td>
-                                <span class="leave-badge badge-other me-2" style="background-color: #f1f5f9; color: #475569;">{{ leave.leave_type }}</span>
-                                <span style="font-size: 0.9rem; color: #64748b; font-weight: 600;"><i class="fas fa-history me-1"></i> {{ leave.start_date|date:"Y/m/d" }} إلى {{ leave.end_date|date:"Y/m/d" }}</span>
-                            </td>
-                            <td style="color: #64748b;">{{ leave.notes|default:"-" }}</td>
+                            <td style="color:var(--text-muted);">{{ leave.notes|default:"—" }}</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="3" class="text-center py-5">
-                                <div style="color: #94a3b8; margin: 40px auto;">
-                                    <i class="fas fa-folder-open mb-3" style="font-size: 2.5rem; color: #cbd5e1;"></i>
-                                    <h6 style="font-weight: 800; color: #0f172a;">السجل فارغ</h6>
+                            <td colspan="3">
+                                <div class="empty-state">
+                                    <div class="tint tint-neutral"><i class="fas fa-folder-open"></i></div>
+                                    <h6>السجل فارغ</h6>
+                                    <p>لم تُسجَّل أي إجازة منتهية حتى الآن.</p>
                                 </div>
                             </td>
                         </tr>
@@ -263,6 +154,7 @@
                 </table>
             </div>
         </div>
+
     </div>
 </div>
 {% endblock %}

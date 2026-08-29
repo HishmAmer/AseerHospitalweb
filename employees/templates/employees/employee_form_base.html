@@ -1,0 +1,291 @@
+{% extends 'employees/base.html' %}
+{# ===================================================================
+   قالب مشترك لنموذج الموظف — ترثه صفحتا الإضافة والتعديل.
+   لا يُستخدم مباشرة من أي view.
+   =================================================================== #}
+
+{% block content %}
+<style>
+    .form-shell { max-width: 940px; margin: 0 auto; }
+
+    .form-section { padding: 22px; border-bottom: 1px solid var(--border); }
+    .form-section:last-of-type { border-bottom: none; }
+
+    .form-section-head {
+        display: flex; align-items: center; gap: 11px;
+        margin-bottom: 18px;
+    }
+    .form-section-head h3 { font-size: .9375rem; font-weight: 800; margin: 0; }
+    .form-section-head .step {
+        margin-right: auto;
+        font-size: .75rem; font-weight: 700; color: var(--text-faint);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* الحقول المشروطة تظهر بانسياب */
+    .conditional-field {
+        animation: revealField .28s ease;
+    }
+    @keyframes revealField {
+        from { opacity: 0; transform: translateY(-6px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .conditional-field .form-label { color: var(--brand-800); }
+    .conditional-field .form-label::after {
+        content: '\f0d9';
+        font-family: 'Font Awesome 6 Free'; font-weight: 900;
+        font-size: .5rem; color: var(--brand-400);
+        margin-right: 5px; vertical-align: middle;
+    }
+
+    .switch-box {
+        padding: 16px 18px;
+        background: var(--surface-sunken);
+        border-radius: var(--r-md);
+        border: 1px solid var(--border);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .conditional-field { animation: none; }
+    }
+</style>
+
+<div class="form-shell">
+
+    {% if form.errors %}
+    <div class="alert-app alert-danger-app mb-3" role="alert">
+        <strong class="d-block mb-2" style="font-size:.9375rem;">
+            <i class="fas fa-circle-exclamation me-1"></i> يرجى مراجعة الأخطاء التالية
+        </strong>
+        <ul class="alert-list">
+            {% for field in form %}
+                {% for error in field.errors %}
+                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="POST" class="panel" novalidate>
+        {% csrf_token %}
+
+        <div class="panel-header">
+            <div>
+                <h2 class="panel-title">{% block form_heading %}بيانات الموظف{% endblock %}</h2>
+                <p style="font-size:.8125rem; color:var(--text-muted); margin:5px 0 0;">
+                    {% block form_subheading %}أدخل المعلومات الشخصية والمهنية بعناية.{% endblock %}
+                </p>
+            </div>
+            <a href="{% url 'employee_list' %}" class="btn-app btn-outline-app">
+                <i class="fas fa-xmark"></i> إلغاء
+            </a>
+        </div>
+
+        <!-- ============ 1. المعلومات الشخصية ============ -->
+        <div class="form-section">
+            <div class="form-section-head">
+                <span class="tint tint-brand"><i class="fas fa-id-card"></i></span>
+                <h3>المعلومات الشخصية</h3>
+                <span class="step">1 / 3</span>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
+                    {{ form.full_name }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="{{ form.national_id.id_for_label }}">{{ form.national_id.label }}</label>
+                    {{ form.national_id }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="{{ form.employee_number.id_for_label }}">{{ form.employee_number.label }}</label>
+                    {{ form.employee_number }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.nationality.id_for_label }}">{{ form.nationality.label }}</label>
+                    {{ form.nationality }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.dob.id_for_label }}">{{ form.dob.label }}</label>
+                    {{ form.dob }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.gender.id_for_label }}">{{ form.gender.label }}</label>
+                    {{ form.gender }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.mobile_number.id_for_label }}">{{ form.mobile_number.label }}</label>
+                    {{ form.mobile_number }}
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ 2. التعيين والتخصص ============ -->
+        <div class="form-section">
+            <div class="form-section-head">
+                <span class="tint tint-ok"><i class="fas fa-briefcase"></i></span>
+                <h3>التعيين والتخصص</h3>
+                <span class="step">2 / 3</span>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.workplace_type.id_for_label }}">{{ form.workplace_type.label }}</label>
+                    {{ form.workplace_type }}
+                </div>
+
+                <div class="col-md-4 conditional-field" id="time-type-box" style="display:none;">
+                    <label class="form-label" for="{{ form.time_type.id_for_label }}">{{ form.time_type.label }}</label>
+                    {{ form.time_type }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.current_workplace.id_for_label }}">{{ form.current_workplace.label }}</label>
+                    {{ form.current_workplace }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.current_department.id_for_label }}">{{ form.current_department.label }}</label>
+                    {{ form.current_department }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+                    {{ form.status }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.general_specialty.id_for_label }}">{{ form.general_specialty.label }}</label>
+                    {{ form.general_specialty }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.has_sub_specialty.id_for_label }}">{{ form.has_sub_specialty.label }}</label>
+                    {{ form.has_sub_specialty }}
+                </div>
+
+                <div class="col-md-4 conditional-field" id="sub-specialty-box" style="display:none;">
+                    <label class="form-label" for="{{ form.sub_specialty.id_for_label }}">{{ form.sub_specialty.label }}</label>
+                    {{ form.sub_specialty }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.is_classified.id_for_label }}">{{ form.is_classified.label }}</label>
+                    {{ form.is_classified }}
+                </div>
+
+                <div class="col-md-4 conditional-field" id="class-expiry-box" style="display:none;">
+                    <label class="form-label" for="{{ form.classification_expiry_date.id_for_label }}">
+                        {{ form.classification_expiry_date.label }}
+                    </label>
+                    {{ form.classification_expiry_date }}
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ 3. العقد والتكليف الإداري ============ -->
+        <div class="form-section">
+            <div class="form-section-head">
+                <span class="tint tint-warn"><i class="fas fa-file-signature"></i></span>
+                <h3>العقد والتكليف الإداري</h3>
+                <span class="step">3 / 3</span>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.employee_type.id_for_label }}">{{ form.employee_type.label }}</label>
+                    {{ form.employee_type }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.employee_category.id_for_label }}">{{ form.employee_category.label }}</label>
+                    {{ form.employee_category }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.contract_job_title.id_for_label }}">{{ form.contract_job_title.label }}</label>
+                    {{ form.contract_job_title }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.contract_start_date.id_for_label }}">{{ form.contract_start_date.label }}</label>
+                    {{ form.contract_start_date }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.contract_end_date.id_for_label }}">{{ form.contract_end_date.label }}</label>
+                    {{ form.contract_end_date }}
+                </div>
+
+                <div class="col-12 mt-2">
+                    <div class="switch-box">
+                        <div class="form-check form-switch mb-0 d-flex align-items-center gap-3">
+                            {{ form.is_admin_assigned }}
+                            <label class="form-check-label fw-bold m-0" style="color:var(--text-strong); cursor:pointer;"
+                                   for="{{ form.is_admin_assigned.id_for_label }}">
+                                {{ form.is_admin_assigned.label }}
+                            </label>
+                        </div>
+                        <div id="admin-details-box" class="mt-3 conditional-field" style="display:none;">
+                            <label class="form-label" for="{{ form.admin_work_details.id_for_label }}">
+                                {{ form.admin_work_details.label }}
+                            </label>
+                            {{ form.admin_work_details }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-footer">
+            <a href="{% url 'employee_list' %}" class="btn-app btn-outline-app">إلغاء</a>
+            <button type="submit" class="btn-app btn-primary-app btn-lg-app">
+                <i class="fas fa-circle-check"></i> {% block submit_label %}حفظ بيانات الموظف{% endblock %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    /**
+     * يربط حقلاً مشروطاً بحقل تحكّم: يُظهره عند تحقق الشرط،
+     * ويُخفيه ويُفرّغ قيمته فيما عدا ذلك حتى لا تُحفظ بيانات متناقضة.
+     */
+    function bindConditional(controlId, boxId, inputId, isVisible) {
+        var control = document.getElementById(controlId);
+        var box = document.getElementById(boxId);
+        var input = document.getElementById(inputId);
+        if (!control || !box) return;
+
+        function apply() {
+            if (isVisible(control)) {
+                box.style.display = '';
+            } else {
+                box.style.display = 'none';
+                if (input) {
+                    if (input.tagName === 'SELECT') input.selectedIndex = 0;
+                    else input.value = '';
+                }
+            }
+        }
+
+        apply();
+        control.addEventListener('change', apply);
+    }
+
+    // التكليف الإداري → تفاصيل العمل الإداري
+    bindConditional('id_is_admin_assigned', 'admin-details-box', 'id_admin_work_details',
+        function (c) { return c.checked; });
+
+    // التصنيف المهني → تاريخ انتهاء التصنيف
+    bindConditional('id_is_classified', 'class-expiry-box', 'id_classification_expiry_date',
+        function (c) { return c.value === 'مصنف'; });
+
+    // نوع المنشأة → التفرّغ
+    bindConditional('id_workplace_type', 'time-type-box', 'id_time_type',
+        function (c) { return c.value === 'مدن طبية' || c.value === 'جامعة الملك خالد'; });
+
+    // وجود تخصص دقيق → التخصص الدقيق
+    bindConditional('id_has_sub_specialty', 'sub-specialty-box', 'id_sub_specialty',
+        function (c) { return c.value === 'نعم'; });
+});
+</script>
+{% endblock %}

@@ -1,75 +1,93 @@
 {% extends 'employees/base.html' %}
 {% block title %}أرشيف الموظفين{% endblock %}
-{% block page_title %}أرشيف الموظفين (سلة المحذوفات){% endblock %}
+{% block page_title %}أرشيف الموظفين{% endblock %}
 
 {% block content %}
 <style>
-    /* SaaS Table Design */
-    .saas-panel { background-color: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
-    .saas-panel-header { padding: 20px 24px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; }
-    .saas-panel-title { font-size: 1.05rem; font-weight: 600; color: var(--text-main); margin: 0; }
-    
-    .saas-table { width: 100%; margin: 0; border-collapse: collapse; }
-    .saas-table th { background-color: #F8FAFC; color: var(--text-secondary); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; padding: 12px 24px; border-bottom: 1px solid var(--border-light); }
-    .saas-table td { padding: 16px 24px; border-bottom: 1px solid var(--border-light); color: var(--text-secondary); font-size: 0.9rem; vertical-align: middle; transition: background-color 0.2s ease; opacity: 0.85; /* شفافية خفيفة للدلالة على الأرشيف */ }
-    .saas-table tbody tr:hover td { background-color: var(--bg-surface-hover); opacity: 1; }
-    .text-main-bold { color: var(--text-main); font-weight: 600; }
-
-    /* Action Buttons */
-    .action-btn { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); border: none; transition: all 0.2s ease; cursor: pointer; padding: 0; }
-    .btn-restore { color: var(--color-success); background-color: var(--color-success-subtle); }
-    .btn-restore:hover { background-color: var(--color-success); color: white; }
-    .btn-hard-delete { color: var(--color-danger); background-color: var(--color-danger-subtle); }
-    .btn-hard-delete:hover { background-color: var(--color-danger); color: white; }
+    /* الصفوف المؤرشفة أخفت قليلاً للدلالة على حالتها */
+    .archived-row td { opacity: .82; transition: opacity .18s ease; }
+    .archived-row:hover td { opacity: 1; }
+    .archived-name { text-decoration: line-through; text-decoration-thickness: 1px; }
+    .archived-avatar {
+        width: 34px; height: 34px; flex-shrink: 0;
+        border-radius: 50%;
+        background: var(--ink-100); color: var(--ink-500);
+        display: flex; align-items: center; justify-content: center;
+        font-size: .8125rem;
+    }
 </style>
 
-<div class="saas-panel">
-    <div class="saas-panel-header">
-        <h2 class="saas-panel-title"><i class="fas fa-archive text-muted me-2"></i> الموظفين المؤرشفين</h2>
+<div class="panel">
+
+    <div class="panel-header">
+        <h2 class="panel-title">
+            <span class="tint tint-neutral"><i class="fas fa-box-archive"></i></span>
+            الموظفون المؤرشفون
+        </h2>
+        <a href="{% url 'employee_list' %}" class="btn-app btn-outline-app">
+            <i class="fas fa-arrow-right"></i> العودة للسجل النشط
+        </a>
     </div>
 
-    <div class="table-responsive">
-        <table class="saas-table">
+    <div class="alert-app alert-info-app m-3" role="note" style="border-radius: var(--r-md);">
+        <i class="fas fa-circle-info me-1"></i>
+        السجلات هنا مخفيّة من القوائم النشطة ولم تُحذف من قاعدة البيانات. يمكن استعادتها في أي وقت.
+    </div>
+
+    <div class="table-scroll">
+        <table class="premium-table">
             <thead>
                 <tr>
                     <th>الموظف</th>
-                    <th>رقم الموظف</th>
+                    <th>الرقم الوظيفي</th>
                     <th>المنشأة والقسم</th>
-                    <th class="text-end">الإجراءات</th>
+                    <th class="text-start">الإجراءات</th>
                 </tr>
             </thead>
             <tbody>
                 {% for emp in employees %}
-                <tr>
+                <tr class="archived-row">
                     <td>
                         <div class="d-flex align-items-center gap-3">
-                            <div style="width: 36px; height: 36px; border-radius: 50%; background-color: #E2E8F0; display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--text-secondary);">
+                            <div class="archived-avatar" aria-hidden="true">
                                 <i class="fas fa-user-slash"></i>
                             </div>
                             <div>
-                                <div class="text-main-bold text-decoration-line-through text-muted">{{ emp.full_name }}</div>
-                                <div style="font-size: 0.8rem; color: var(--text-tertiary);">{{ emp.contract_job_title.name }}</div>
+                                <div class="cell-primary archived-name">{{ emp.full_name }}</div>
+                                <div class="cell-secondary">
+                                    <i class="fas fa-tag"></i> {{ emp.contract_job_title|default:"—" }}
+                                </div>
                             </div>
                         </div>
                     </td>
-                    <td style="font-family: monospace;">{{ emp.employee_number }}</td>
+
+                    <td class="cell-primary">{{ emp.employee_number|default:"—" }}</td>
+
                     <td>
-                        <div class="text-main-bold">{{ emp.current_workplace.name }}</div>
-                        <div style="font-size: 0.8rem;">{{ emp.current_department.name }}</div>
+                        <div style="font-weight:600;">{{ emp.current_workplace.name|default:"—" }}</div>
+                        <div class="cell-secondary">
+                            <i class="fas fa-sitemap"></i> {{ emp.current_department.name|default:"—" }}
+                        </div>
                     </td>
-                    <td class="text-end">
-                        <div class="d-inline-flex gap-2 align-items-center">
-                            <form method="POST" action="{% url 'restore_employee' emp.pk %}" onsubmit="return confirm('هل أنت متأكد من استعادة هذا الموظف للعمل؟');">
+
+                    <td class="text-start">
+                        <div class="d-flex gap-2">
+                            <form method="POST" action="{% url 'restore_employee' emp.pk %}"
+                                  onsubmit="return confirm('هل أنت متأكد من استعادة هذا الموظف للعمل؟');">
                                 {% csrf_token %}
-                                <button type="submit" class="action-btn btn-restore" title="استعادة للسجل النشط">
-                                    <i class="fas fa-undo"></i>
+                                <button type="submit" class="action-circle action-circle-ok"
+                                        title="استعادة للسجل النشط" aria-label="استعادة {{ emp.full_name }}">
+                                    <i class="fas fa-rotate-left"></i>
                                 </button>
                             </form>
+
                             {% if request.user.is_superuser %}
-                            <form method="POST" action="{% url 'hard_delete_employee' emp.pk %}" onsubmit="return confirm('تحذير: سيتم مسح هذا الموظف نهائياً من قاعدة البيانات ولن يمكنك استعادته. هل أنت متأكد؟');">
+                            <form method="POST" action="{% url 'hard_delete_employee' emp.pk %}"
+                                  onsubmit="return confirm('تحذير: سيتم مسح هذا الموظف نهائياً من قاعدة البيانات ولن يمكنك استعادته. هل أنت متأكد؟');">
                                 {% csrf_token %}
-                                <button type="submit" class="action-btn btn-hard-delete" title="حذف نهائي">
-                                    <i class="fas fa-times"></i>
+                                <button type="submit" class="action-circle action-circle-danger"
+                                        title="حذف نهائي" aria-label="حذف {{ emp.full_name }} نهائياً">
+                                    <i class="fas fa-trash-can"></i>
                                 </button>
                             </form>
                             {% endif %}
@@ -78,11 +96,11 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4" class="text-center py-5">
-                        <div style="color: var(--text-tertiary); max-width: 300px; margin: 0 auto;">
-                            <i class="fas fa-box-open mb-3" style="font-size: 3rem; opacity: 0.5;"></i>
-                            <h6 class="text-main-bold">الأرشيف فارغ</h6>
-                            <p style="font-size: 0.85rem;">لا يوجد أي موظفين محذوفين في الوقت الحالي.</p>
+                    <td colspan="4">
+                        <div class="empty-state">
+                            <div class="tint tint-neutral"><i class="fas fa-box-open"></i></div>
+                            <h6>الأرشيف فارغ</h6>
+                            <p>لا يوجد أي موظف مؤرشف في الوقت الحالي.</p>
                         </div>
                     </td>
                 </tr>
@@ -90,5 +108,6 @@
             </tbody>
         </table>
     </div>
+
 </div>
 {% endblock %}

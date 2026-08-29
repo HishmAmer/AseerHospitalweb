@@ -4,190 +4,243 @@
 
 {% block content %}
 <style>
-    .premium-panel { background-color: #ffffff; border-radius: 1.5rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04); height: 100%; display: flex; flex-direction: column; overflow: hidden; border: none; transition: transform 0.3s ease, box-shadow 0.3s ease; }
-    .premium-panel:hover { transform: translateY(-3px); box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.06); }
-    .premium-panel-header { padding: 20px 24px; background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%); border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
-    .premium-panel-title { font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 10px; }
-    .icon-circle-sm { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
-    .settings-list { list-style: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto; max-height: 280px; }
-    .settings-list::-webkit-scrollbar { width: 6px; }
-    .settings-list::-webkit-scrollbar-track { background: transparent; }
-    .settings-list::-webkit-scrollbar-thumb { background-color: #e2e8f0; border-radius: 10px; }
-    .settings-list-item { padding: 16px 24px; border-bottom: 1px solid #f8fafc; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; }
-    .settings-list-item:hover { background-color: #f8fafc; }
-    .settings-list-item:last-child { border-bottom: none; }
-    .item-name { font-size: 0.95rem; font-weight: 700; color: #475569; }
-    .action-circle-danger { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #f1f5f9; color: #94a3b8; transition: all 0.2s ease; text-decoration: none; border: none; cursor: pointer; padding: 0; }
-    .action-circle-danger:hover { background: #FEF2F2; color: #EF4444; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(239, 68, 68, 0.15); }
-    .btn-premium-sm { border-radius: 1rem; padding: 8px 16px; font-weight: 700; font-size: 0.85rem; transition: all 0.3s ease; border: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; text-decoration: none; }
-    .btn-premium-primary { background-color: #4F46E5; color: white; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
-    .btn-premium-primary:hover { background-color: #4338CA; transform: translateY(-2px); color: white; box-shadow: 0 6px 15px rgba(79, 70, 229, 0.3); }
+    .ref-panel { display: flex; flex-direction: column; height: 100%; }
+    /* الرأس على سطر واحد دائماً — بدونه يلتفّ الزر في البطاقات الضيقة
+       فتختلف ارتفاعات البطاقات الأربع ويبدو الصف غير مستوٍ. */
+    .ref-panel .panel-header { padding: 14px 16px; flex-wrap: nowrap; gap: 10px; }
+    .ref-panel .panel-title { font-size: .9375rem; min-width: 0; }
+
+    /* زر إضافة مضغوط — أيقونة فقط مع تسمية للقارئات الصوتية */
+    .btn-add-ref {
+        width: 32px; height: 32px; flex-shrink: 0;
+        padding: 0; border-radius: var(--r-sm);
+        font-size: .8125rem;
+    }
+
+    .ref-list { list-style: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto; max-height: 300px; }
+    .ref-list::-webkit-scrollbar { width: 5px; }
+    .ref-list::-webkit-scrollbar-track { background: transparent; }
+    .ref-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--r-pill); }
+
+    .ref-item {
+        padding: 11px 18px;
+        border-bottom: 1px solid var(--ink-100);
+        display: flex; justify-content: space-between; align-items: center; gap: 10px;
+        transition: background-color .14s ease;
+    }
+    .ref-item:last-child { border-bottom: none; }
+    .ref-item:hover { background: var(--surface-sunken); }
+    .ref-item .name { font-size: .875rem; font-weight: 600; color: var(--text); }
+
+    /* زر الحذف يظهر عند المرور — يقلّل الضجيج البصري */
+    .ref-item .action-circle { opacity: 0; transition: opacity .14s ease; }
+    .ref-item:hover .action-circle,
+    .ref-item .action-circle:focus-visible { opacity: 1; }
+    @media (hover: none) { .ref-item .action-circle { opacity: 1; } }
+
+    .ref-empty {
+        padding: 28px 18px; text-align: center;
+        color: var(--text-faint); font-size: .8125rem; font-weight: 600;
+    }
+
+    .ref-count {
+        font-size: .75rem; font-weight: 700; color: var(--text-faint);
+        font-variant-numeric: tabular-nums;
+    }
 </style>
 
-<div class="row g-4 justify-content-center">
-    <!-- 1. المنشآت / الفروع -->
-    <div class="col-md-6 col-lg-4">
-        <div class="premium-panel">
-            <div class="premium-panel-header">
-                <h5 class="premium-panel-title">
-                    <div class="icon-circle-sm" style="background-color: #E0F2FE; color: #0284C7;"><i class="fas fa-building"></i></div>
+<div class="row g-3">
+
+    <!-- ============ المنشآت ============ -->
+    <div class="col-md-6 col-xl-3">
+        <div class="panel ref-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">
+                    <span class="tint tint-brand"><i class="fas fa-building"></i></span>
                     المنشآت
-                </h5>
-                <button class="btn-premium-sm btn-premium-primary" onclick="openAddModal('workplace', 'إضافة منشأة / فرع جديد')"><i class="fas fa-plus"></i> إضافة</button>
+                </h2>
+                <button type="button" class="btn-app btn-outline-app btn-add-ref"
+                        onclick="openAddModal('workplace', 'إضافة منشأة / فرع جديد')"
+                        title="إضافة منشأة" aria-label="إضافة منشأة">
+                    <i class="fas fa-plus"></i>
+                </button>
             </div>
-            <ul class="settings-list">
+            <ul class="ref-list">
                 {% for item in workplaces %}
-                <li class="settings-list-item">
-                    <span class="item-name">{{ item.name }}</span>
-                    <form method="POST" action="{% url 'delete_setting_item' 'workplace' item.pk %}" onsubmit="return confirm('تأكيد الحذف؟');">
+                <li class="ref-item">
+                    <span class="name">{{ item.name }}</span>
+                    <form method="POST" action="{% url 'delete_setting_item' 'workplace' item.pk %}"
+                          onsubmit="return confirm('تأكيد حذف «{{ item.name|escapejs }}»؟');">
                         {% csrf_token %}
-                        <button type="submit" class="action-circle-danger"><i class="fas fa-trash-alt"></i></button>
+                        <button type="submit" class="action-circle action-circle-danger"
+                                title="حذف" aria-label="حذف {{ item.name }}">
+                            <i class="fas fa-trash-can"></i>
+                        </button>
                     </form>
                 </li>
                 {% empty %}
-                <li class="settings-list-item text-muted justify-content-center py-4">لا توجد بيانات</li>
+                <li class="ref-empty">لا توجد بيانات</li>
                 {% endfor %}
             </ul>
         </div>
     </div>
 
-    <!-- 2. التخصص العام -->
-    <div class="col-md-6 col-lg-4">
-        <div class="premium-panel">
-            <div class="premium-panel-header">
-                <h5 class="premium-panel-title">
-                    <div class="icon-circle-sm" style="background-color: #FFE4E6; color: #E11D48;"><i class="fas fa-stethoscope"></i></div>
+    <!-- ============ التخصص العام ============ -->
+    <div class="col-md-6 col-xl-3">
+        <div class="panel ref-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">
+                    <span class="tint tint-danger"><i class="fas fa-stethoscope"></i></span>
                     التخصص العام
-                </h5>
-                <button class="btn-premium-sm btn-premium-primary" onclick="openAddModal('general_specialty', 'إضافة تخصص عام')"><i class="fas fa-plus"></i> إضافة</button>
+                </h2>
+                <button type="button" class="btn-app btn-outline-app btn-add-ref"
+                        onclick="openAddModal('general_specialty', 'إضافة تخصص عام')"
+                        title="إضافة تخصص عام" aria-label="إضافة تخصص عام">
+                    <i class="fas fa-plus"></i>
+                </button>
             </div>
-            <ul class="settings-list">
+            <ul class="ref-list">
                 {% for item in general_specialties %}
-                <li class="settings-list-item">
-                    <span class="item-name">{{ item.name }}</span>
-                    <form method="POST" action="{% url 'delete_setting_item' 'general_specialty' item.pk %}" onsubmit="return confirm('تأكيد الحذف؟');">
+                <li class="ref-item">
+                    <span class="name">{{ item.name }}</span>
+                    <form method="POST" action="{% url 'delete_setting_item' 'general_specialty' item.pk %}"
+                          onsubmit="return confirm('تأكيد حذف «{{ item.name|escapejs }}»؟');">
                         {% csrf_token %}
-                        <button type="submit" class="action-circle-danger"><i class="fas fa-trash-alt"></i></button>
+                        <button type="submit" class="action-circle action-circle-danger"
+                                title="حذف" aria-label="حذف {{ item.name }}">
+                            <i class="fas fa-trash-can"></i>
+                        </button>
                     </form>
                 </li>
                 {% empty %}
-                <li class="settings-list-item text-muted justify-content-center py-4">لا توجد بيانات</li>
+                <li class="ref-empty">لا توجد بيانات</li>
                 {% endfor %}
             </ul>
         </div>
     </div>
 
-    <!-- 3. التخصص الدقيق -->
-    <div class="col-md-6 col-lg-4">
-        <div class="premium-panel">
-            <div class="premium-panel-header">
-                <h5 class="premium-panel-title">
-                    <div class="icon-circle-sm" style="background-color: #F1F5F9; color: #475569;"><i class="fas fa-microscope"></i></div>
+    <!-- ============ التخصص الدقيق ============ -->
+    <div class="col-md-6 col-xl-3">
+        <div class="panel ref-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">
+                    <span class="tint tint-violet"><i class="fas fa-microscope"></i></span>
                     التخصص الدقيق
-                </h5>
-                <button class="btn-premium-sm btn-premium-primary" onclick="openAddModal('sub_specialty', 'إضافة تخصص دقيق')"><i class="fas fa-plus"></i> إضافة</button>
+                </h2>
+                <button type="button" class="btn-app btn-outline-app btn-add-ref"
+                        onclick="openAddModal('sub_specialty', 'إضافة تخصص دقيق')"
+                        title="إضافة تخصص دقيق" aria-label="إضافة تخصص دقيق">
+                    <i class="fas fa-plus"></i>
+                </button>
             </div>
-            <ul class="settings-list">
+            <ul class="ref-list">
                 {% for item in sub_specialties %}
-                <li class="settings-list-item">
-                    <span class="item-name">{{ item.name }}</span>
-                    <form method="POST" action="{% url 'delete_setting_item' 'sub_specialty' item.pk %}" onsubmit="return confirm('تأكيد الحذف؟');">
+                <li class="ref-item">
+                    <span class="name">{{ item.name }}</span>
+                    <form method="POST" action="{% url 'delete_setting_item' 'sub_specialty' item.pk %}"
+                          onsubmit="return confirm('تأكيد حذف «{{ item.name|escapejs }}»؟');">
                         {% csrf_token %}
-                        <button type="submit" class="action-circle-danger"><i class="fas fa-trash-alt"></i></button>
+                        <button type="submit" class="action-circle action-circle-danger"
+                                title="حذف" aria-label="حذف {{ item.name }}">
+                            <i class="fas fa-trash-can"></i>
+                        </button>
                     </form>
                 </li>
                 {% empty %}
-                <li class="settings-list-item text-muted justify-content-center py-4">لا توجد بيانات</li>
+                <li class="ref-empty">لا توجد بيانات</li>
                 {% endfor %}
             </ul>
         </div>
     </div>
 
-    <!-- 4. الأقسام / الإدارات -->
-    <div class="col-md-6 col-lg-4">
-        <div class="premium-panel">
-            <div class="premium-panel-header">
-                <h5 class="premium-panel-title">
-                    <div class="icon-circle-sm" style="background-color: #F0FDF4; color: #16A34A;"><i class="fas fa-sitemap"></i></div>
+    <!-- ============ الأقسام ============ -->
+    <div class="col-md-6 col-xl-3">
+        <div class="panel ref-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">
+                    <span class="tint tint-ok"><i class="fas fa-sitemap"></i></span>
                     الأقسام
-                </h5>
-                <button class="btn-premium-sm btn-premium-primary" onclick="openAddModal('department', 'إضافة قسم جديد')"><i class="fas fa-plus"></i> إضافة</button>
+                </h2>
+                <button type="button" class="btn-app btn-outline-app btn-add-ref"
+                        onclick="openAddModal('department', 'إضافة قسم جديد')"
+                        title="إضافة قسم" aria-label="إضافة قسم">
+                    <i class="fas fa-plus"></i>
+                </button>
             </div>
-            <ul class="settings-list">
+            <ul class="ref-list">
                 {% for item in departments %}
-                <li class="settings-list-item">
-                    <span class="item-name">{{ item.name }}</span>
-                    <form method="POST" action="{% url 'delete_setting_item' 'department' item.pk %}" onsubmit="return confirm('تأكيد الحذف؟');">
+                <li class="ref-item">
+                    <span class="name">{{ item.name }}</span>
+                    <form method="POST" action="{% url 'delete_setting_item' 'department' item.pk %}"
+                          onsubmit="return confirm('تأكيد حذف «{{ item.name|escapejs }}»؟');">
                         {% csrf_token %}
-                        <button type="submit" class="action-circle-danger"><i class="fas fa-trash-alt"></i></button>
+                        <button type="submit" class="action-circle action-circle-danger"
+                                title="حذف" aria-label="حذف {{ item.name }}">
+                            <i class="fas fa-trash-can"></i>
+                        </button>
                     </form>
                 </li>
                 {% empty %}
-                <li class="settings-list-item text-muted justify-content-center py-4">لا توجد بيانات</li>
+                <li class="ref-empty">لا توجد بيانات</li>
                 {% endfor %}
             </ul>
         </div>
     </div>
+
 </div>
 
-<!-- ==============================================
-     المودال القياسي النظيف (بدون تعقيدات CSS)
-=============================================== -->
-<div class="modal fade" id="addSettingModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+<!-- ============ نافذة الإضافة ============ -->
+<div class="modal fade" id="addSettingModal" data-bs-backdrop="static" tabindex="-1"
+     aria-labelledby="modalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <!-- استخدمنا الكلاسات الافتراضية لبوتستراب لضمان عملها 100% -->
-        <div class="modal-content" style="border-radius: 1rem; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
-            
+        <div class="modal-content" style="border-radius: var(--r-lg); border: 1px solid var(--border); box-shadow: var(--shadow-lg);">
+
             <form id="addSettingForm" method="POST" action="">
                 {% csrf_token %}
-                
-                <div class="modal-header bg-light" style="border-radius: 1rem 1rem 0 0;">
-                    <h5 class="modal-title fw-bold text-dark" id="modalTitle">إضافة بيانات</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+
+                <div class="modal-header" style="border-bottom: 1px solid var(--border); padding: 16px 20px;">
+                    <h5 class="modal-title" id="modalTitle" style="font-size:1rem; font-weight:800;">إضافة بيانات</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
                 </div>
-                
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-secondary">الاسم:</label>
-                        <input type="text" id="settingInputName" name="name" class="form-control form-control-lg" required placeholder="اكتب هنا...">
-                    </div>
+
+                <div class="modal-body" style="padding: 20px;">
+                    <label class="form-label" for="settingInputName">الاسم</label>
+                    <input type="text" id="settingInputName" name="name" class="form-control"
+                           required maxlength="150" placeholder="اكتب الاسم هنا…">
                 </div>
-                
-                <div class="modal-footer bg-light" style="border-radius: 0 0 1rem 1rem;">
-                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
-                    <!-- الزرار ده Type="submit" يعني هيبعت الداتا تلقائي لجانغو -->
-                    <button type="submit" class="btn btn-primary rounded-pill px-4">
-                        <i class="fas fa-check me-1"></i> حفظ البيانات
+
+                <div class="modal-footer" style="border-top: 1px solid var(--border); background: var(--surface-sunken); padding: 14px 20px; gap: 8px;">
+                    <button type="button" class="btn-app btn-outline-app" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn-app btn-primary-app">
+                        <i class="fas fa-check"></i> حفظ
                     </button>
                 </div>
-                
             </form>
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
-    function openAddModal(itemType, title) {
-        // 1. تحديث العنوان وتفريغ الحقل
-        document.getElementById('modalTitle').innerText = title;
-        document.getElementById('settingInputName').value = '';
-        
-        // 2. تحديث الرابط اللي الفورم هيبعت عليه الداتا
-        let baseUrl = "{% url 'add_setting_item' 'DUMMY_TYPE' %}";
-        document.getElementById('addSettingForm').action = baseUrl.replace('DUMMY_TYPE', itemType);
-        
-        // 3. فتح النافذة برمجياً
-        var modalEl = document.getElementById('addSettingModal');
-        var myModal = bootstrap.Modal.getInstance(modalEl);
-        if (!myModal) {
-            myModal = new bootstrap.Modal(modalEl);
-        }
-        myModal.show();
-        
-        // 4. وضع المؤشر جوا الحقل تلقائي للسرعة
-        setTimeout(function() {
-            document.getElementById('settingInputName').focus();
-        }, 500);
-    }
+(function () {
+    var modalEl = document.getElementById('addSettingModal');
+    var form = document.getElementById('addSettingForm');
+    var input = document.getElementById('settingInputName');
+    var titleEl = document.getElementById('modalTitle');
+    var baseUrl = "{% url 'add_setting_item' 'DUMMY_TYPE' %}";
+    var instance = null;
+
+    window.openAddModal = function (itemType, title) {
+        titleEl.textContent = title;
+        input.value = '';
+        form.action = baseUrl.replace('DUMMY_TYPE', itemType);
+        instance = instance || new bootstrap.Modal(modalEl);
+        instance.show();
+    };
+
+    // التركيز على الحقل بعد اكتمال حركة الفتح
+    modalEl.addEventListener('shown.bs.modal', function () { input.focus(); });
+})();
 </script>
 {% endblock %}

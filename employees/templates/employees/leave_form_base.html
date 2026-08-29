@@ -1,0 +1,116 @@
+{% extends 'employees/base.html' %}
+{# ===================================================================
+   قالب مشترك لنموذج الإجازة — ترثه صفحتا التسجيل والتعديل.
+   لا يُستخدم مباشرة من أي view.
+   =================================================================== #}
+
+{% block content %}
+<div style="max-width: 760px; margin: 0 auto;">
+
+    {% if form.errors %}
+    <div class="alert-app alert-danger-app mb-3" role="alert">
+        <strong class="d-block mb-2" style="font-size:.9375rem;">
+            <i class="fas fa-circle-exclamation me-1"></i> يرجى مراجعة الأخطاء التالية
+        </strong>
+        <ul class="alert-list">
+            {% for field in form %}
+                {% for error in field.errors %}
+                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="POST" class="panel" novalidate>
+        {% csrf_token %}
+
+        <div class="panel-header">
+            <div>
+                <h2 class="panel-title">
+                    <span class="tint tint-warn"><i class="fas fa-umbrella-beach"></i></span>
+                    {% block form_heading %}بيانات الإجازة{% endblock %}
+                </h2>
+                <p style="font-size:.8125rem; color:var(--text-muted); margin:5px 0 0;">
+                    {% block form_subheading %}أدخل بيانات الإجازة وتأكد من صحة التواريخ.{% endblock %}
+                </p>
+            </div>
+            <a href="{% url 'leave_list' %}" class="btn-app btn-outline-app">
+                <i class="fas fa-xmark"></i> إلغاء
+            </a>
+        </div>
+
+        <div class="panel-body">
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label" for="{{ form.employee.id_for_label }}">{{ form.employee.label }}</label>
+                    {{ form.employee }}
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="{{ form.leave_type.id_for_label }}">{{ form.leave_type.label }}</label>
+                    {{ form.leave_type }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.start_date.id_for_label }}">{{ form.start_date.label }}</label>
+                    {{ form.start_date }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.end_date.id_for_label }}">{{ form.end_date.label }}</label>
+                    {{ form.end_date }}
+                </div>
+
+                <div class="col-12">
+                    <div id="durationHint" class="alert-app alert-info-app" style="display:none; padding:11px 14px; font-size:.8125rem; font-weight:700;">
+                        <i class="fas fa-calendar-check me-1"></i>
+                        مدة الإجازة: <span id="durationValue" class="num"></span>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+                    {{ form.notes }}
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-footer">
+            <a href="{% url 'leave_list' %}" class="btn-app btn-outline-app">إلغاء</a>
+            <button type="submit" class="btn-app btn-primary-app btn-lg-app">
+                <i class="fas fa-circle-check"></i> {% block submit_label %}حفظ الإجازة{% endblock %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var start = document.getElementById('{{ form.start_date.id_for_label }}');
+    var end   = document.getElementById('{{ form.end_date.id_for_label }}');
+    var hint  = document.getElementById('durationHint');
+    var value = document.getElementById('durationValue');
+    if (!start || !end || !hint) return;
+
+    // معاينة فورية للمدة — نفس حساب duration_days في النموذج (شامل الطرفين)
+    function update() {
+        if (!start.value || !end.value) { hint.style.display = 'none'; return; }
+
+        var from = new Date(start.value);
+        var to = new Date(end.value);
+        if (isNaN(from) || isNaN(to) || to < from) { hint.style.display = 'none'; return; }
+
+        var days = Math.round((to - from) / 86400000) + 1;
+        value.textContent = days + (days === 1 ? ' يوم' : ' يوماً');
+        hint.style.display = '';
+    }
+
+    start.addEventListener('change', update);
+    end.addEventListener('change', update);
+    update();
+});
+</script>
+{% endblock %}

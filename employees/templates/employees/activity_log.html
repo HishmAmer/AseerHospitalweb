@@ -1,96 +1,47 @@
 {% extends 'employees/base.html' %}
 {% block title %}سجل النشاطات{% endblock %}
-{% block page_title %}مراقبة نشاطات النظام (Audit Log){% endblock %}
+{% block page_title %}سجل مراقبة النظام{% endblock %}
 
 {% block content %}
 <style>
-    /* =========================================
-       تحديثات التصميم الفاخر (Premium UI)
-       ========================================= */
-    .premium-panel { 
-        background-color: #ffffff; 
-        border-radius: 1.5rem; 
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04); 
-        overflow: hidden; 
-        border: none; 
+    .log-avatar {
+        width: 34px; height: 34px; flex-shrink: 0;
+        border-radius: 50%;
+        background: var(--ink-100); color: var(--ink-600);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: .8125rem;
     }
-    
-    .premium-panel-header { 
-        padding: 24px 32px; 
-        border-bottom: 1px solid #f1f5f9; 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center; 
-    }
-    
-    .premium-panel-title { 
-        font-size: 1.25rem; 
-        font-weight: 800; 
-        color: #0f172a; 
-        margin: 0; 
-        display: flex; 
-        align-items: center; 
-        gap: 12px; 
-    }
-    
-    .icon-circle {
-        width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
-    }
-
-    /* تصميم الجدول الفاخر */
-    .premium-table { width: 100%; margin: 0; border-collapse: separate; border-spacing: 0; }
-    .premium-table th { 
-        background-color: #ffffff; 
-        color: #64748b; 
-        font-size: 0.85rem; 
-        font-weight: 800; 
-        text-transform: uppercase; 
-        padding: 16px 32px; 
-        border-bottom: 2px solid #f1f5f9; 
-        white-space: nowrap; 
-    }
-    .premium-table td { 
-        padding: 20px 32px; 
-        border-bottom: 1px solid #f8fafc; 
-        color: #475569; 
-        font-size: 0.95rem; 
-        vertical-align: middle; 
-        transition: background-color 0.2s ease; 
-    }
-    .premium-table tbody tr:hover td { background-color: #f8fafc; }
-
-    /* Action Badges الفاخرة */
-    .saas-badge { padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
-    .badge-add { background-color: #ecfdf5; color: #10B981; }
-    .badge-edit { background-color: #EEF2FF; color: #4F46E5; }
-    .badge-delete { background-color: #fef2f2; color: #EF4444; }
-    .badge-restore { background-color: #fffbeb; color: #F59E0B; }
-    .badge-system { background-color: #F1F5F9; color: #475569; }
-    
-    .time-text { font-size: 0.9rem; color: #64748b; font-weight: 600; }
+    .log-time { text-align: start; }
+    .log-time .date { font-weight: 700; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+    .log-time .clock { font-size: .75rem; color: var(--text-faint); margin-top: 1px; font-variant-numeric: tabular-nums; }
+    .log-desc { font-weight: 600; color: var(--text); line-height: 1.55; }
 </style>
 
-<div class="premium-panel">
-    <div class="premium-panel-header">
+<div class="panel">
+
+    <div class="panel-header">
         <div>
-            <h2 class="premium-panel-title">
-                <div class="icon-circle shadow-sm" style="background-color: #ffffff; color: #4F46E5;">
-                    <i class="fas fa-satellite-dish"></i>
-                </div>
+            <h2 class="panel-title">
+                <span class="tint tint-brand"><i class="fas fa-clock-rotate-left"></i></span>
                 سجل المراقبة الشامل
             </h2>
-            <p style="font-size: 0.9rem; color: #64748b; margin-top: 6px; font-weight: 600; margin-bottom: 0;">يتم عرض الإجراءات التي تمت على النظام خلال آخر 30 يوماً (شهر).</p>
+            <p style="font-size:.8125rem; color:var(--text-muted); margin:6px 0 0;">
+                يعرض الإجراءات المنفَّذة على النظام خلال آخر 30 يوماً.
+            </p>
         </div>
+        <button type="button" class="btn-app btn-outline-app" onclick="window.print()">
+            <i class="fas fa-print"></i> طباعة
+        </button>
     </div>
 
-    <div class="table-responsive">
+    <div class="table-scroll">
         <table class="premium-table">
             <thead>
                 <tr>
                     <th>المستخدم</th>
                     <th>الإجراء</th>
                     <th>التفاصيل</th>
-                    <th class="text-end" style="padding-left: 32px;">التاريخ والوقت</th>
+                    <th class="text-start">التاريخ والوقت</th>
                 </tr>
             </thead>
             <tbody>
@@ -98,40 +49,47 @@
                 <tr>
                     <td>
                         <div class="d-flex align-items-center gap-3">
-                            <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #EEF2FF; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.95rem; color: #4F46E5;">
-                                {{ log.user.username|make_list|first|upper|default:"-" }}
+                            <div class="log-avatar" aria-hidden="true">
+                                {% if log.user %}{{ log.user.username|make_list|first|upper }}{% else %}؟{% endif %}
                             </div>
-                            <div style="font-weight: 800; color: #0f172a;">{{ log.user.first_name|default:log.user.username }}</div>
+                            <div class="cell-primary">
+                                {% if log.user %}
+                                    {{ log.user.first_name|default:log.user.username }}
+                                {% else %}
+                                    <span style="color:var(--text-faint); font-weight:600;">مستخدم محذوف</span>
+                                {% endif %}
+                            </div>
                         </div>
                     </td>
+
                     <td>
                         {% if log.action_type == 'إضافة' %}
-                            <span class="saas-badge badge-add"><i class="fas fa-plus-circle"></i> إضافة</span>
+                            <span class="badge-app badge-ok"><i class="fas fa-circle-plus"></i> إضافة</span>
                         {% elif log.action_type == 'تعديل' %}
-                            <span class="saas-badge badge-edit"><i class="fas fa-pen"></i> تعديل</span>
+                            <span class="badge-app badge-info"><i class="fas fa-pen"></i> تعديل</span>
                         {% elif log.action_type == 'حذف' %}
-                            <span class="saas-badge badge-delete"><i class="fas fa-trash"></i> حذف</span>
+                            <span class="badge-app badge-danger"><i class="fas fa-trash-can"></i> حذف</span>
                         {% elif log.action_type == 'استعادة' %}
-                            <span class="saas-badge badge-restore"><i class="fas fa-undo"></i> استعادة</span>
+                            <span class="badge-app badge-warn"><i class="fas fa-rotate-left"></i> استعادة</span>
                         {% else %}
-                            <span class="saas-badge badge-system"><i class="fas fa-cog"></i> {{ log.action_type }}</span>
+                            <span class="badge-app badge-neutral"><i class="fas fa-gear"></i> {{ log.action_type }}</span>
                         {% endif %}
                     </td>
-                    <td style="font-weight: 600; color: #334155;">{{ log.description }}</td>
-                    <td class="text-end time-text" style="padding-left: 32px;">
-                        <div style="font-weight: 800; color: #0f172a;">{{ log.timestamp|date:"Y/m/d" }}</div>
-                        <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">{{ log.timestamp|time:"h:i A" }}</div>
+
+                    <td class="log-desc">{{ log.description }}</td>
+
+                    <td class="log-time">
+                        <div class="date">{{ log.timestamp|date:"Y/m/d" }}</div>
+                        <div class="clock">{{ log.timestamp|time:"H:i" }}</div>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4" class="text-center py-5">
-                        <div style="color: #94a3b8; max-width: 300px; margin: 40px auto;">
-                            <div class="icon-circle mx-auto mb-3" style="background-color: #f1f5f9; width: 80px; height: 80px; font-size: 2.5rem; color: #cbd5e1;">
-                                <i class="fas fa-wind"></i>
-                            </div>
-                            <h6 style="font-weight: 800; color: #0f172a; font-size: 1.1rem;">السجل فارغ</h6>
-                            <p style="font-size: 0.95rem; margin-top: 8px;">لم يتم تسجيل أي حركات في النظام خلال آخر 30 يوماً.</p>
+                    <td colspan="4">
+                        <div class="empty-state">
+                            <div class="tint tint-neutral"><i class="fas fa-wind"></i></div>
+                            <h6>السجل فارغ</h6>
+                            <p>لم تُسجَّل أي حركة على النظام خلال آخر 30 يوماً.</p>
                         </div>
                     </td>
                 </tr>
@@ -139,5 +97,6 @@
             </tbody>
         </table>
     </div>
+
 </div>
 {% endblock %}
