@@ -19,41 +19,72 @@
     
     <style>
         /* =========================================
-           PREMIUM SAAS LOGIN PAGE DESIGN
+           GLASSMORPHISM & SKY THEME
            ========================================= */
         body { 
             font-family: 'Cairo', system-ui, -apple-system, sans-serif;
-            /* خلفية عصرية بلمسة متدرجة هادئة */
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            /* خلفية سماوية متدرجة */
+            background: linear-gradient(135deg, #e0f2fe 0%, #7dd3fc 50%, #38bdf8 100%);
             min-height: 100vh; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
             -webkit-font-smoothing: antialiased;
             margin: 0;
+            position: relative;
+            overflow: hidden; /* لمنع ظهور شريط التمرير بسبب الأشكال العائمة */
+        }
+
+        /* الأشكال الدائرية المموهة في الخلفية لإبراز تأثير الزجاج */
+        .glass-orb-1, .glass-orb-2 {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            z-index: 0;
+            opacity: 0.6;
+        }
+        .glass-orb-1 {
+            width: 400px;
+            height: 400px;
+            background: #ffffff;
+            top: -100px;
+            right: -100px;
+        }
+        .glass-orb-2 {
+            width: 350px;
+            height: 350px;
+            background: #0284c7;
+            bottom: -50px;
+            left: -100px;
         }
         
         .login-wrapper {
             width: 100%;
             max-width: 440px;
             padding: 24px;
+            position: relative;
+            z-index: 1; /* ليكون فوق الأشكال المموهة */
         }
         
+        /* تأثير الزجاج العائم (Glassmorphism) */
         .premium-login-card { 
-            background: #FFFFFF; 
+            background: rgba(255, 255, 255, 0.35); /* خلفية بيضاء شفافة */
+            backdrop-filter: blur(16px); /* تمويه الخلفية */
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.6); /* إطار زجاجي لامع */
             border-radius: 1.5rem; 
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1); 
+            box-shadow: 0 25px 50px -12px rgba(2, 132, 199, 0.25); /* ظل يتناسب مع السماء */
             padding: 48px 40px; 
-            border: none; 
         }
         
-        /* تصميم مربع اللوجو الفاخر */
+        /* تصميم مربع اللوجو الزجاجي */
         .hospital-logo-login {
             width: 88px;
             height: 88px;
             margin: 0 auto 24px;
-            background-color: #ffffff;
-            border: 2px solid #f1f5f9;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
             border-radius: 1.25rem;
             display: flex;
             align-items: center;
@@ -74,26 +105,32 @@
             margin-bottom: 8px;
         }
         
+        /* حقول الإدخال الزجاجية */
         .premium-input { 
             border-radius: 1rem; 
             padding: 14px 20px; 
-            background-color: #ffffff; 
-            border: 1px solid #e2e8f0; 
+            background: rgba(255, 255, 255, 0.4); 
+            border: 1px solid rgba(255, 255, 255, 0.5); 
             font-size: 1rem;
             font-weight: 600;
             color: #0f172a;
             width: 100%;
             transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .premium-input::placeholder {
+            color: #64748b;
         }
         .premium-input:focus { 
-            border-color: #4F46E5; 
-            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); 
+            background: rgba(255, 255, 255, 0.7);
+            border-color: #ffffff; 
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.4); 
             outline: none;
         }
         
+        /* زر تسجيل الدخول */
         .btn-premium-primary { 
-            background-color: #4F46E5; 
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); 
             color: white; 
             border: none; 
             border-radius: 1rem; 
@@ -102,40 +139,52 @@
             font-size: 1.05rem;
             width: 100%; 
             transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);
             margin-top: 8px;
             cursor: pointer;
         }
         .btn-premium-primary:hover { 
-            background-color: #4338CA; 
+            background: linear-gradient(135deg, #0369a1 0%, #075985 100%); 
             transform: translateY(-2px); 
-            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+            box-shadow: 0 8px 25px rgba(2, 132, 199, 0.4);
         }
 
+        /* التنبيهات بخلفية شبه شفافة */
         .alert-premium {
             border-radius: 1rem; 
-            border: none; 
-            background-color: #FEF2F2; 
-            color: #EF4444; 
+            border: 1px solid rgba(239, 68, 68, 0.3); 
+            background: rgba(254, 242, 242, 0.7); 
+            backdrop-filter: blur(5px);
+            color: #b91c1c; 
             padding: 16px; 
             font-weight: 700; 
             font-size: 0.95rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
+        
+        .footer-text {
+            color: #0f172a; 
+            font-size: 0.85rem; 
+            font-weight: 700;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.5); /* لتحسين القراءة على الخلفية الفاتحة */
+        }
     </style>
 </head>
 <body>
+
+    <!-- الأشكال الهندسية العائمة في الخلفية -->
+    <div class="glass-orb-1"></div>
+    <div class="glass-orb-2"></div>
 
     <div class="login-wrapper">
         <div class="premium-login-card">
             <div class="text-center mb-5">
                 <div class="hospital-logo-login">
-                    <!-- تأكد من وضع مسار اللوجو الصحيح، وضفت أيقونة بديلة في حالة عدم التحميل -->
                     <img src="{% static 'images/logo.svg' %}" alt="شعار تجمع عسير الصحي" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                    <i class="fas fa-hospital-alt" style="font-size: 2.5rem; color: #4F46E5; display: none;"></i>
+                    <i class="fas fa-hospital-alt" style="font-size: 2.5rem; color: #0284c7; display: none;"></i>
                 </div>
                 <h4 style="color: #0f172a; font-size: 1.35rem; font-weight: 900; margin-bottom: 6px;">تجمع عسير الصحي</h4>
-                <p style="color: #64748b; font-size: 0.95rem; font-weight: 600; margin-bottom: 0;">إدارة المستشفيات والمراكز المتخصصة</p>
+                <p style="color: #334155; font-size: 0.95rem; font-weight: 700; margin-bottom: 0;">إدارة المستشفيات والمراكز المتخصصة</p>
             </div>
 
             <form method="POST" action="{% url 'login' %}">
@@ -162,7 +211,7 @@
         </div>
         
         <div class="text-center mt-4">
-            <p style="color: #64748b; font-size: 0.85rem; font-weight: 600;">© 2026 تجمع عسير الصحي. جميع الحقوق محفوظة.</p>
+            <p class="footer-text">© 2026 تجمع عسير الصحي. جميع الحقوق محفوظة.</p>
         </div>
     </div>
 
