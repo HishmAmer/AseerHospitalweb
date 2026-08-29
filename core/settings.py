@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 import dj_database_url
@@ -28,6 +29,19 @@ def as_hostname(value):
     if host.startswith('['):  # bracketed IPv6 literal, e.g. [::1]:8000
         return host.split(']', 1)[0] + ']'
     return host.rsplit(':', 1)[0] if host.count(':') == 1 else host
+
+
+def will_serve_requests():
+    """Whether this process is going to answer HTTP requests.
+
+    A WSGI server importing settings counts; `manage.py collectstatic` and
+    `manage.py migrate` do not. ALLOWED_HOSTS only protects request handling,
+    and Render leaves RENDER_EXTERNAL_HOSTNAME empty during builds, so
+    demanding it at build time would block deploys without securing anything.
+    """
+    if not sys.argv or Path(sys.argv[0]).name != 'manage.py':
+        return True
+    return len(sys.argv) > 1 and sys.argv[1] == 'runserver'
 
 
 def as_origin(value, default_scheme):
@@ -67,11 +81,14 @@ if PLATFORM_HOSTNAME:
         ALLOWED_HOSTS.append(PLATFORM_HOSTNAME)
 
 if not ALLOWED_HOSTS:
-    if not DEBUG:
+    if not DEBUG and will_serve_requests():
         raise ImproperlyConfigured(
             'DJANGO_ALLOWED_HOSTS must list the hostnames this server answers on, '
-            'e.g. DJANGO_ALLOWED_HOSTS=hr.aseer.local,10.0.0.15'
+            'e.g. DJANGO_ALLOWED_HOSTS=hr.aseer.local,10.0.0.15. On Render this '
+            'is filled in from RENDER_EXTERNAL_HOSTNAME, which is only set for '
+            'web services at runtime.'
         )
+    # Build-time commands never serve a request, so a placeholder is safe here.
     ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
 
 # Set DJANGO_SECURE_SSL=True once the site is served over HTTPS. It is off by

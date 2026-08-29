@@ -1,6 +1,9 @@
+import sys
+from unittest import mock
+
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from .models import Employee, Leave, UserProfile, Workplace
@@ -218,3 +221,41 @@ class ExcelExportTests(SecurityTestCase):
         self.assertEqual(excel_safe('+1+1'), "'+1+1")
         self.assertEqual(excel_safe('محمد'), 'محمد')
         self.assertEqual(excel_safe(42), 42)
+
+
+class HostConfigurationTests(SimpleTestCase):
+    """Guards the deployment contract: a build must not need a hostname it
+    cannot know, and a serving process must never run without one."""
+
+    def test_pasted_urls_reduce_to_a_bare_hostname(self):
+        from core.settings import as_hostname
+
+        for value in ('https://app.onrender.com/', 'app.onrender.com:443', 'App.onrender.com.'):
+            self.assertEqual(as_hostname(value), 'app.onrender.com')
+
+    def test_ipv6_literal_keeps_its_brackets(self):
+        from core.settings import as_hostname
+
+        self.assertEqual(as_hostname('[::1]:8000'), '[::1]')
+
+    def test_csrf_origin_gains_a_scheme_and_is_lowercased(self):
+        from core.settings import as_origin
+
+        self.assertEqual(as_origin('App.onrender.com', 'https'), 'https://app.onrender.com')
+        self.assertEqual(as_origin('http://10.0.0.15/', 'https'), 'http://10.0.0.15')
+
+    def test_build_commands_do_not_require_allowed_hosts(self):
+        from core.settings import will_serve_requests
+
+        for argv in (['manage.py', 'collectstatic'], ['manage.py', 'migrate']):
+            with mock.patch.object(sys, 'argv', argv):
+                self.assertFalse(will_serve_requests())
+
+    def test_serving_processes_require_allowed_hosts(self):
+        from core.settings import will_serve_requests
+
+        with mock.patch.object(sys, 'argv', ['manage.py', 'runserver']):
+            self.assertTrue(will_serve_requests())
+        # gunicorn imports settings without manage.py on argv.
+        with mock.patch.object(sys, 'argv', ['/usr/bin/gunicorn', 'core.wsgi']):
+            self.assertTrue(will_serve_requests())
