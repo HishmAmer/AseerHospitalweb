@@ -4,3 +4,15 @@ env/
 db.sqlite3
 __pycache__/
 *.pyc
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Generated at deploy time
+staticfiles/
+media/
+
+# OS noise
+.DS_Store
