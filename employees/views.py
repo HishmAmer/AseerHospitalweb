@@ -17,6 +17,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from .excel_compare import ExcelFormatError, compare
 from .forms import EmployeeForm, LeaveForm
 from .models import (
     ActivityLog,
@@ -317,6 +318,91 @@ def export_employees_excel(request):
     wb.save(response)
 
     log_activity(request.user, 'نظام', 'قام بتصدير بيانات الموظفين المفلترة إلى ملف Excel')
+    return response
+
+
+# أقصى حجم لملف المطابقة. الحدّ منفصل عن DATA_UPLOAD_MAX_MEMORY_SIZE ليعطي
+# رسالة عربية واضحة بدل استثناء Django العام.
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+
+
+@login_required(login_url='login')
+def reconcile_employees(request):
+    """يقارن ملف Excel مرفوعاً بسجلات الموظفين ضمن نطاق صلاحية المستخدم.
+
+    العملية للقراءة فقط — لا تُنشئ ولا تُعدّل أي سجل. الملف لا يُخزَّن في
+    مجلد الوسائط؛ يبقى في ذاكرة الطلب، وإن تجاوز FILE_UPLOAD_MAX_MEMORY_SIZE
+    كتبه Django في ملف مؤقت يحذفه فور انتهاء الطلب.
+    """
+    context = {'report': None}
+
+    if request.method == 'POST':
+        upload = request.FILES.get('excel_file')
+
+        if upload is None:
+            messages.error(request, 'يرجى اختيار ملف Excel أولاً.')
+            return render(request, 'employees/reconcile.html', context)
+
+        if not upload.name.lower().endswith('.xlsx'):
+            messages.error(
+                request,
+                'الصيغة غير مدعومة. يجب أن يكون الملف بامتداد ‎.xlsx‎ '
+                '(من Excel: حفظ باسم ← Excel Workbook).'
+            )
+            return render(request, 'employees/reconcile.html', context)
+
+        if upload.size > MAX_UPLOAD_BYTES:
+            messages.error(
+                request,
+                f'حجم الملف {upload.size // 1024 // 1024} ميجابايت، '
+                f'والحد الأقصى {MAX_UPLOAD_BYTES // 1024 // 1024} ميجابايت.'
+            )
+            return render(request, 'employees/reconcile.html', context)
+
+        employees = list(
+            scoped_employees(request.user, Employee.objects.filter(is_deleted=False))
+            .select_related('current_workplace', 'current_department')
+            .order_by('full_name')
+        )
+
+        try:
+            report = compare(upload, employees)
+        except ExcelFormatError as exc:
+            messages.error(request, str(exc))
+            return render(request, 'employees/reconcile.html', context)
+
+        context['report'] = report
+        context['file_name'] = upload.name
+        log_activity(
+            request.user,
+            'نظام',
+            f'طابق ملف Excel ({upload.name}) مع بيانات الموظفين: '
+            f'{len(report["missing_in_system"])} غير مسجّل، '
+            f'{len(report["differences"])} به اختلافات'
+        )
+
+    return render(request, 'employees/reconcile.html', context)
+
+
+@login_required(login_url='login')
+def reconcile_template(request):
+    """قالب Excel فارغ بترويسات المطابقة، ليملأه المستخدم ويرفعه."""
+    from .excel_compare import COMPARED_FIELDS
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'قالب المطابقة'
+    ws.sheet_view.rightToLeft = True
+    ws.append([label for _, label in COMPARED_FIELDS])
+
+    for index in range(1, len(COMPARED_FIELDS) + 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(index)].width = 20
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="Reconcile_Template.xlsx"'
+    wb.save(response)
     return response
 
 

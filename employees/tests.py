@@ -259,3 +259,136 @@ class HostConfigurationTests(SimpleTestCase):
         # gunicorn imports settings without manage.py on argv.
         with mock.patch.object(sys, 'argv', ['/usr/bin/gunicorn', 'core.wsgi']):
             self.assertTrue(will_serve_requests())
+
+
+def build_workbook(rows, headers=None):
+    """ملف Excel في الذاكرة، بترويسات التصدير الافتراضية."""
+    import io
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(headers or ['اسم الموظف', 'رقم الهوية', 'الرقم الوظيفي', 'حالة الموظف'])
+    for row in rows:
+        ws.append(row)
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    buffer.name = 'test.xlsx'
+    return buffer
+
+
+class ExcelReconcileTests(SecurityTestCase):
+    def setUp(self):
+        super().setUp()
+        self.own_employee.national_id = '1010101010'
+        self.own_employee.employee_number = 'EMP-1'
+        self.own_employee.save()
+
+        self.other_employee.national_id = '2020202020'
+        self.other_employee.employee_number = 'EMP-2'
+        self.other_employee.save()
+
+        self.url = reverse('reconcile_employees')
+
+    def post_file(self, buffer, user='branch_a', password='Str0ngPass!2024'):
+        self.client.login(username=user, password=password)
+        return self.client.post(self.url, {'excel_file': buffer})
+
+    def test_page_requires_login(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login/', response['Location'])
+
+    def test_row_absent_from_system_is_reported(self):
+        buffer = build_workbook([['موظف جديد', '3030303030', 'EMP-9', 'نشط']])
+        report = self.post_file(buffer).context['report']
+
+        self.assertEqual(len(report['missing_in_system']), 1)
+        self.assertEqual(report['missing_in_system'][0]['national_id'], '3030303030')
+
+    def test_employee_absent_from_file_is_reported(self):
+        buffer = build_workbook([['موظف أ', '1010101010', 'EMP-1', 'نشط']])
+        report = self.post_file(buffer).context['report']
+
+        self.assertEqual(report['matched_count'], 1)
+        self.assertEqual(list(report['missing_in_file']), [])
+
+    def test_differing_value_is_reported(self):
+        buffer = build_workbook([['موظف أ', '1010101010', 'EMP-1', 'مستقيل']])
+        report = self.post_file(buffer).context['report']
+
+        self.assertEqual(len(report['differences']), 1)
+        changed = report['differences'][0]['fields']
+        self.assertEqual([f['label'] for f in changed], ['حالة الموظف'])
+        self.assertEqual(changed[0]['system'], 'نشط')
+        self.assertEqual(changed[0]['file'], 'مستقيل')
+
+    def test_branch_user_never_sees_another_workplace(self):
+        """صف يخصّ منشأة أخرى يُعدّ غير مسجّل، ولا يُكشف سجلها."""
+        buffer = build_workbook([['موظف ب', '2020202020', 'EMP-2', 'نشط']])
+        report = self.post_file(buffer).context['report']
+
+        self.assertEqual(report['total_system'], 1)
+        self.assertEqual(len(report['missing_in_system']), 1)
+        names = [e.full_name for e in report['missing_in_file']]
+        self.assertNotIn('موظف ب', names)
+
+    def test_arabic_digits_and_numeric_cells_match(self):
+        """رقم الهوية كرقم أو بأرقام عربية يطابق النص المخزَّن."""
+        buffer = build_workbook([['موظف أ', 1010101010, 'EMP-1', 'نشط']])
+        self.assertEqual(self.post_file(buffer).context['report']['matched_count'], 1)
+
+        buffer = build_workbook([['موظف أ', '١٠١٠١٠١٠١٠', 'EMP-1', 'نشط']])
+        self.assertEqual(self.post_file(buffer).context['report']['matched_count'], 1)
+
+    def test_duplicate_row_is_flagged_not_double_counted(self):
+        buffer = build_workbook([
+            ['موظف أ', '1010101010', 'EMP-1', 'نشط'],
+            ['موظف أ', '1010101010', 'EMP-1', 'نشط'],
+        ])
+        report = self.post_file(buffer).context['report']
+
+        self.assertEqual(report['matched_count'], 1)
+        self.assertEqual(len(report['unreadable_rows']), 1)
+        self.assertIn('مكرر', report['unreadable_rows'][0]['reason'])
+
+    def test_row_without_any_identifier_is_flagged(self):
+        buffer = build_workbook([['بلا معرّف', None, None, 'نشط']])
+        report = self.post_file(buffer).context['report']
+
+        self.assertEqual(len(report['unreadable_rows']), 1)
+        self.assertEqual(report['missing_in_system'], [])
+
+    def test_file_without_identifier_column_is_rejected(self):
+        buffer = build_workbook([['موظف أ', 'نشط']], headers=['اسم الموظف', 'حالة الموظف'])
+        response = self.post_file(buffer)
+
+        self.assertIsNone(response.context['report'])
+        self.assertContains(response, 'رقم الهوية', status_code=200)
+
+    def test_non_xlsx_upload_is_rejected(self):
+        import io
+
+        fake = io.BytesIO(b'name,id\nfoo,1\n')
+        fake.name = 'employees.csv'
+        response = self.post_file(fake)
+
+        self.assertIsNone(response.context['report'])
+
+    def test_comparison_never_writes_to_the_database(self):
+        before = list(Employee.objects.values_list('full_name', 'status', 'national_id'))
+        buffer = build_workbook([
+            ['اسم مختلف تماماً', '1010101010', 'EMP-1', 'مستقيل'],
+            ['موظف جديد', '9090909090', 'EMP-99', 'نشط'],
+        ])
+        self.post_file(buffer)
+
+        self.assertEqual(before, list(Employee.objects.values_list('full_name', 'status', 'national_id')))
+
+    def test_template_download_is_an_xlsx(self):
+        self.client.login(username='branch_a', password='Str0ngPass!2024')
+        response = self.client.get(reverse('reconcile_template'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('spreadsheetml', response['Content-Type'])
