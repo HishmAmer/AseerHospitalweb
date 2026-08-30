@@ -9,6 +9,28 @@ from django.core.exceptions import ImproperlyConfigured
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def load_env_file(path):
+    """يقرأ ملف .env إن وُجد، دون أي اعتماد خارجي.
+
+    متغيّرات البيئة الحقيقية لها الأولوية، فمنصّات مثل Render تظل تعمل
+    كما هي، ويبقى الملف وسيلة مريحة للتركيب على خادم داخلي.
+    """
+    if not path.exists():
+        return
+    for line in path.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, _, value = line.partition('=')
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+load_env_file(BASE_DIR / '.env')
+
+
 def env_bool(name, default=False):
     return os.environ.get(name, str(default)).strip().lower() in ('1', 'true', 'yes', 'on')
 

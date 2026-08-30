@@ -1,0 +1,22 @@
+# خدمة systemd لتشغيل النظام تلقائياً عند إقلاع الخادم (Linux)
+#
+#   sudo cp tools/aseer-hr.service /etc/systemd/system/
+#   sudo nano /etc/systemd/system/aseer-hr.service     # عدّل المسار والمستخدم
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now aseer-hr
+#   sudo systemctl status aseer-hr
+
+[Unit]
+Description=Aseer HR System
+After=network.target
+
+[Service]
+Type=simple
+User=aseer
+WorkingDirectory=/opt/aseer-hr
+ExecStart=/opt/aseer-hr/tools/run.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

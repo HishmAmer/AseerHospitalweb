@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>دليل التركيب | نظام إدارة الموارد البشرية</title>
+<style>
+:root{--brand:#0088C6;--brand-d:#00618F;--ink:#0B1F2E;--ink-2:#41586D;--ink-3:#7A8FA3;
+      --line:#DCE6EE;--bg:#F7FAFC;--warn-bg:#FFF7E8;--warn-line:#F0C87A;
+      --danger-bg:#FDECEA;--danger-line:#F0B0AA;--ok-bg:#E9F7F1;--ok-line:#A5DCC6;}
+*{box-sizing:border-box}
+body{font-family:"Segoe UI","Tahoma",system-ui,sans-serif;background:var(--bg);color:var(--ink-2);
+     margin:0;line-height:1.85;font-size:16px}
+.wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+header{background:linear-gradient(135deg,#0B2A3E,#071E2D);color:#fff;border-radius:14px;
+       padding:32px 30px;margin-bottom:30px}
+header h1{margin:0 0 8px;font-size:1.7rem;color:#fff}
+header p{margin:0;color:#A9C1D2}
+h2{color:var(--ink);font-size:1.25rem;margin:38px 0 14px;padding-bottom:9px;
+   border-bottom:2px solid var(--brand)}
+h3{color:var(--ink);font-size:1.05rem;margin:26px 0 10px}
+code{background:#EEF3F7;padding:2px 6px;border-radius:4px;font-family:Consolas,monospace;
+     font-size:.9em;color:#0B4A6B;direction:ltr;display:inline-block}
+pre{background:#0B2A3E;color:#E8F1F7;padding:16px 18px;border-radius:10px;overflow-x:auto;
+    direction:ltr;text-align:left;font-family:Consolas,monospace;font-size:.88rem;line-height:1.7}
+.box{border-radius:10px;padding:16px 18px;margin:18px 0;border:1px solid}
+.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.danger{background:var(--danger-bg);border-color:var(--danger-line)}
+.ok{background:var(--ok-bg);border-color:var(--ok-line)}
+.box b{color:var(--ink)}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.94rem}
+th,td{border:1px solid var(--line);padding:9px 12px;text-align:right}
+th{background:#EEF3F7;color:var(--ink);font-weight:700}
+ol,ul{padding-right:22px}
+li{margin:7px 0}
+.step{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:16px 0}
+.step h3{margin-top:0;display:flex;align-items:center;gap:10px}
+.num{background:var(--brand);color:#fff;width:28px;height:28px;border-radius:50%;
+     display:inline-flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0}
+footer{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);
+       color:var(--ink-3);font-size:.85rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>دليل التركيب</h1>
+  <p>نظام إدارة الموارد البشرية — تجمع عسير الصحي · للتركيب على خادم داخلي</p>
+</header>
+
+<div class="box warn">
+  <b>قبل أن تبدأ:</b> نفّذ الخطوات <b>بالترتيب</b>. كل خطوة تعتمد على ما قبلها.
+  التركيب كامل يستغرق نحو 15 دقيقة.
+</div>
+
+
+<h2>ما تحتاجه</h2>
+<table>
+  <tr><th>العنصر</th><th>التفاصيل</th></tr>
+  <tr><td>خادم</td><td>Windows Server أو Linux — جهاز عادي يكفي</td></tr>
+  <tr><td>Python</td><td>الإصدار 3.11 أو 3.12 أو 3.13</td></tr>
+  <tr><td>الذاكرة</td><td>2 جيجابايت فأكثر</td></tr>
+  <tr><td>المساحة</td><td>1 جيجابايت فأكثر</td></tr>
+  <tr><td>الشبكة</td><td>عنوان IP ثابت للخادم داخل الشبكة</td></tr>
+</table>
+
+<div class="box danger">
+  <b>مهم — لا تستخدم Python 3.14.</b> النظام مبني على Django 5.2 المدعوم رسمياً
+  حتى 3.13. الإصدار 3.14 قد يعمل ثم ينكسر فجأة في إحدى المكتبات.
+</div>
+
+
+<h2>التركيب على Windows Server</h2>
+
+<div class="step">
+  <h3><span class="num">1</span> تركيب Python</h3>
+  <p>نزّل Python 3.13 من <code>python.org/downloads</code></p>
+  <div class="box danger" style="margin:12px 0">
+    أثناء التركيب فعّل خانة <b>Add Python to PATH</b> في أول شاشة.
+    نسيانها هو السبب الأول لفشل التركيب.
+  </div>
+</div>
+
+<div class="step">
+  <h3><span class="num">2</span> نسخ ملفات النظام</h3>
+  <p>فُكّ الضغط عن الملف في مسار ثابت، مثل <code>C:\AseerHR</code></p>
+  <p>تجنّب المسارات التي تحوي مسافات أو حروفاً عربية.</p>
+</div>
+
+<div class="step">
+  <h3><span class="num">3</span> توليد المفتاح السري</h3>
+  <p>افتح <b>موجّه الأوامر (Command Prompt)</b> داخل مجلد النظام واكتب:</p>
+  <pre>python generate_key.py</pre>
+  <p>سيظهر سطر يبدأ بـ <code>DJANGO_SECRET_KEY=</code> — انسخه كاملاً.</p>
+</div>
+
+<div class="step">
+  <h3><span class="num">4</span> إعداد ملف الإعدادات</h3>
+  <ol>
+    <li>انسخ الملف <code>.env.example</code> وسمِّ النسخة <code>.env</code></li>
+    <li>افتحه بـ Notepad</li>
+    <li>الصق المفتاح مكان السطر <code>DJANGO_SECRET_KEY=</code></li>
+    <li>اكتب عنوان الخادم في <code>DJANGO_ALLOWED_HOSTS</code></li>
+  </ol>
+  <p>مثال إن كان عنوان الخادم <code>10.0.0.15</code>:</p>
+  <pre>DJANGO_ALLOWED_HOSTS=10.0.0.15</pre>
+  <div class="box warn" style="margin:12px 0">
+    اكتب العنوان <b>فقط</b> — بلا <code>http://</code> وبلا <code>/</code> في النهاية.
+    الخطأ هنا يجعل النظام يرد برسالة <code>Bad Request (400)</code> على كل الطلبات.
+  </div>
+</div>
+
+<div class="step">
+  <h3><span class="num">5</span> تشغيل التركيب</h3>
+  <p>افتح مجلد <code>tools</code> وشغّل بالنقر المزدوج:</p>
+  <pre>1-تركيب-النظام.bat</pre>
+  <p>انتظر حتى تظهر رسالة «تم التركيب بنجاح».</p>
+</div>
+
+<div class="step">
+  <h3><span class="num">6</span> إنشاء حساب المدير</h3>
+  <pre>2-إنشاء-حساب-مدير.bat</pre>
+  <p>سيطلب اسم مستخدم، ثم بريداً، ثم كلمة مرور مرتين.</p>
+  <div class="box warn" style="margin:12px 0">
+    كلمة المرور <b>لا تظهر أثناء الكتابة</b> — لا حروف ولا نجوم. هذا طبيعي، أكمل الكتابة واضغط Enter.
+  </div>
+</div>
+
+<div class="step">
+  <h3><span class="num">7</span> تشغيل النظام</h3>
+  <pre>3-تشغيل-النظام.bat</pre>
+  <p>اترك النافذة مفتوحة. النظام الآن يعمل.</p>
+</div>
+
+<div class="step">
+  <h3><span class="num">8</span> فتح النظام من أجهزة الموظفين</h3>
+  <p>من أي متصفح داخل الشبكة:</p>
+  <pre>http://10.0.0.15:8000</pre>
+  <p>استبدل العنوان بعنوان خادمك.</p>
+</div>
+
+
+<h2>التركيب على Linux</h2>
+
+<pre>cd /opt/aseer-hr
+cp .env.example .env
+python3 generate_key.py        # انسخ الناتج إلى .env
+nano .env                      # عدّل المفتاح والعنوان
+
+bash tools/install.sh
+venv/bin/python manage.py createsuperuser
+bash tools/run.sh</pre>
+
+<h3>التشغيل التلقائي عند إقلاع الخادم</h3>
+<pre>sudo cp tools/aseer-hr.service /etc/systemd/system/
+sudo nano /etc/systemd/system/aseer-hr.service   # عدّل المسار والمستخدم
+sudo systemctl daemon-reload
+sudo systemctl enable --now aseer-hr
+sudo systemctl status aseer-hr</pre>
+
+
+<h2>فتح المنفذ في جدار الحماية</h2>
+<p>إن لم يفتح النظام من أجهزة أخرى، فالمنفذ 8000 مغلق:</p>
+
+<h3>Windows</h3>
+<pre>netsh advfirewall firewall add rule name="Aseer HR" ^
+  dir=in action=allow protocol=TCP localport=8000</pre>
+
+<h3>Linux</h3>
+<pre>sudo ufw allow 8000/tcp</pre>
+
+
+<h2>ملاحظة أمنية يجب إبلاغ العميل بها</h2>
+<div class="box danger">
+  <p>النظام يعمل افتراضياً على <b>HTTP بلا تشفير</b>. هذا يعني أن كلمات المرور
+  وبيانات الموظفين <b>تمرّ على الشبكة الداخلية بنص مقروء</b>، ويمكن لمن يملك
+  وصولاً للشبكة أن يلتقطها.</p>
+  <p style="margin-bottom:0">مقبول داخل شبكة معزولة وموثوقة. وإن أمكن تركيب شهادة SSL،
+  غيّر <code>DJANGO_SECURE_SSL=True</code> في <code>.env</code> وأعد التشغيل.
+  <b>لا تفعّله قبل تركيب الشهادة</b> وإلا تعطّل الدخول تماماً.</p>
+</div>
+
+
+<h2>قاعدة البيانات</h2>
+<p>النظام يستخدم <b>SQLite</b> افتراضياً — ملف واحد اسمه <code>db.sqlite3</code>
+داخل مجلد النظام. لا يحتاج أي تركيب إضافي، ويكفي تماماً حتى بضعة آلاف موظف
+وعشرات المستخدمين.</p>
+
+<div class="box ok">
+  <b>الأهم:</b> ملف <code>db.sqlite3</code> هو <b>كل بياناتك</b>.
+  فقدانه يعني فقدان كل شيء. راجع دليل التشغيل لجدولة النسخ الاحتياطي.
+</div>
+
+<p>للانتقال إلى PostgreSQL لاحقاً (عند تجاوز عشرات المستخدمين المتزامنين)،
+اكتب في <code>.env</code>:</p>
+<pre>DATABASE_URL=postgres://user:password@127.0.0.1:5432/dbname</pre>
+
+
+<footer>
+  نظام إدارة الموارد البشرية — تجمع عسير الصحي · دليل التركيب
+</footer>
+
+</div>
+</body>
+</html>

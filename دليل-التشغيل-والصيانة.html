@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>دليل التشغيل والصيانة | نظام إدارة الموارد البشرية</title>
+<style>
+:root{--brand:#0088C6;--ink:#0B1F2E;--ink-2:#41586D;--ink-3:#7A8FA3;
+      --line:#DCE6EE;--bg:#F7FAFC;--warn-bg:#FFF7E8;--warn-line:#F0C87A;
+      --danger-bg:#FDECEA;--danger-line:#F0B0AA;--ok-bg:#E9F7F1;--ok-line:#A5DCC6;}
+*{box-sizing:border-box}
+body{font-family:"Segoe UI","Tahoma",system-ui,sans-serif;background:var(--bg);color:var(--ink-2);
+     margin:0;line-height:1.85;font-size:16px}
+.wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+header{background:linear-gradient(135deg,#0B2A3E,#071E2D);color:#fff;border-radius:14px;
+       padding:32px 30px;margin-bottom:30px}
+header h1{margin:0 0 8px;font-size:1.7rem;color:#fff}
+header p{margin:0;color:#A9C1D2}
+h2{color:var(--ink);font-size:1.25rem;margin:38px 0 14px;padding-bottom:9px;
+   border-bottom:2px solid var(--brand)}
+h3{color:var(--ink);font-size:1.05rem;margin:24px 0 10px}
+code{background:#EEF3F7;padding:2px 6px;border-radius:4px;font-family:Consolas,monospace;
+     font-size:.9em;color:#0B4A6B;direction:ltr;display:inline-block}
+pre{background:#0B2A3E;color:#E8F1F7;padding:16px 18px;border-radius:10px;overflow-x:auto;
+    direction:ltr;text-align:left;font-family:Consolas,monospace;font-size:.88rem;line-height:1.7}
+.box{border-radius:10px;padding:16px 18px;margin:18px 0;border:1px solid}
+.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.danger{background:var(--danger-bg);border-color:var(--danger-line)}
+.ok{background:var(--ok-bg);border-color:var(--ok-line)}
+.box b{color:var(--ink)}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.94rem}
+th,td{border:1px solid var(--line);padding:9px 12px;text-align:right;vertical-align:top}
+th{background:#EEF3F7;color:var(--ink);font-weight:700}
+ol,ul{padding-right:22px} li{margin:7px 0}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0}
+.card h3{margin-top:0}
+footer{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);
+       color:var(--ink-3);font-size:.85rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>دليل التشغيل والصيانة</h1>
+  <p>ما تحتاج معرفته بعد التركيب — الاستخدام اليومي، النسخ الاحتياطي، وحل المشكلات</p>
+</header>
+
+
+<h2>الصلاحيات — من يرى ماذا</h2>
+<p>النظام يفصل بين نوعين من الحسابات، والفصل مطبَّق في الخادم لا في الواجهة فقط:</p>
+
+<table>
+  <tr><th>الصلاحية</th><th>مدير النظام</th><th>مستخدم فرع</th></tr>
+  <tr><td>الموظفون</td><td>كل المنشآت</td><td>منشأته فقط</td></tr>
+  <tr><td>الإجازات</td><td>كل المنشآت</td><td>منشأته فقط</td></tr>
+  <tr><td>إعدادات النظام</td><td>نعم</td><td>لا</td></tr>
+  <tr><td>إدارة الحسابات</td><td>نعم</td><td>لا</td></tr>
+  <tr><td>سجل النشاطات</td><td>نعم</td><td>لا</td></tr>
+  <tr><td>الحذف النهائي</td><td>نعم</td><td>لا</td></tr>
+</table>
+
+<div class="box ok">
+  <b>مبدأ مهم:</b> مستخدم الفرع لا يستطيع رؤية أو تعديل موظفي منشأة أخرى
+  <b>حتى لو عرف الرابط المباشر</b>. الحماية في الخادم، لا في إخفاء الأزرار.
+</div>
+
+<h3>إنشاء حساب لموظف جديد</h3>
+<ol>
+  <li>من القائمة: <b>الصلاحيات</b> ← <b>مستخدم جديد</b></li>
+  <li>اختر <b>مستخدم فرع</b> وحدّد منشأته</li>
+  <li>كلمة المرور: 10 أحرف على الأقل، غير شائعة، وليست أرقاماً فقط</li>
+</ol>
+
+<div class="box warn">
+  <b>عند مغادرة موظف:</b> لا تحذف حسابه — بل <b>عطّله</b> (حالة الحساب ← معطّل).
+  الحذف يفقدك أثره في سجل النشاطات.
+</div>
+
+
+<h2>النسخ الاحتياطي — الأهم على الإطلاق</h2>
+
+<div class="box danger">
+  <p style="margin-top:0"><b>ملف <code>db.sqlite3</code> هو كل بياناتك.</b>
+  كل موظف، كل إجازة، كل حساب. لا يوجد مكان آخر محفوظة فيه.</p>
+  <p style="margin-bottom:0">عطل في القرص الصلب بلا نسخة احتياطية = <b>فقدان كامل ونهائي</b>.</p>
+</div>
+
+<h3>نسخة يدوية</h3>
+<p><b>Windows:</b> شغّل <code>tools\4-نسخة-احتياطية.bat</code></p>
+<p><b>Linux:</b> <code>bash tools/backup.sh</code></p>
+<p>تُحفظ النسخ في مجلد <code>backups</code> باسم يحمل التاريخ والوقت.</p>
+
+<h3>جدولة نسخة يومية تلقائية</h3>
+
+<div class="card">
+  <h3>Windows — Task Scheduler</h3>
+  <ol>
+    <li>افتح <b>Task Scheduler</b></li>
+    <li><b>Create Basic Task</b> ← سمِّها «نسخة احتياطية — نظام الموارد البشرية»</li>
+    <li>التكرار: <b>Daily</b> — الوقت: بعد ساعات العمل (مثلاً 11 مساءً)</li>
+    <li>الإجراء: <b>Start a program</b></li>
+    <li>البرنامج: <code>C:\AseerHR\tools\4-نسخة-احتياطية.bat</code></li>
+  </ol>
+</div>
+
+<div class="card">
+  <h3>Linux — cron</h3>
+  <pre>crontab -e</pre>
+  <p>أضف السطر التالي (نسخة يومية 11 مساءً):</p>
+  <pre>0 23 * * * /opt/aseer-hr/tools/backup.sh</pre>
+</div>
+
+<div class="box danger">
+  <b>النسخة على نفس الجهاز ليست نسخة احتياطية.</b>
+  انسخ مجلد <code>backups</code> دورياً إلى قرص خارجي أو خادم آخر أو مساحة الشبكة.
+  لو احترق الجهاز أو سُرق، ضاعت النسخ معه.
+</div>
+
+<h3>الاستعادة من نسخة</h3>
+<ol>
+  <li>أوقف النظام (أغلق نافذة التشغيل، أو <code>sudo systemctl stop aseer-hr</code>)</li>
+  <li>أعد تسمية <code>db.sqlite3</code> الحالي إلى <code>db.sqlite3.old</code> — لا تحذفه</li>
+  <li>انسخ النسخة المطلوبة من <code>backups</code> وسمِّها <code>db.sqlite3</code></li>
+  <li>شغّل النظام</li>
+</ol>
+<div class="box warn">
+  <b>جرّب الاستعادة مرة واحدة على الأقل</b> قبل أن تحتاجها فعلاً.
+  نسخة احتياطية لم تُختبر ليست نسخة يمكن الاعتماد عليها.
+</div>
+
+
+<h2>حل المشكلات الشائعة</h2>
+
+<table>
+  <tr><th>المشكلة</th><th>السبب والحل</th></tr>
+
+  <tr>
+    <td><b>Bad Request (400)</b><br>صفحة بيضاء بهذا النص</td>
+    <td>عنوان الخادم غير مذكور في <code>DJANGO_ALLOWED_HOSTS</code>.
+        افتح <code>.env</code> وتأكد أن العنوان مكتوب بلا <code>http://</code>
+        وبلا <code>/</code>. ثم أعد التشغيل.</td>
+  </tr>
+
+  <tr>
+    <td><b>الموقع لا يفتح من أجهزة أخرى</b><br>ويفتح على الخادم نفسه</td>
+    <td>المنفذ 8000 مغلق في جدار الحماية — راجع دليل التركيب.</td>
+  </tr>
+
+  <tr>
+    <td><b>الصفحة بلا تنسيق</b><br>نصوص بلا ألوان</td>
+    <td>الملفات الثابتة لم تُجهَّز. نفّذ:
+        <code>venv\Scripts\python manage.py collectstatic --no-input</code></td>
+  </tr>
+
+  <tr>
+    <td><b>ImproperlyConfigured: DJANGO_SECRET_KEY</b></td>
+    <td>ملف <code>.env</code> مفقود أو المفتاح فارغ. شغّل
+        <code>python generate_key.py</code> والصق الناتج.</td>
+  </tr>
+
+  <tr>
+    <td><b>تم إيقاف المحاولات مؤقتاً</b></td>
+    <td>حماية من تخمين كلمة المرور بعد 10 محاولات فاشلة.
+        انتظر 15 دقيقة، أو أعد تشغيل النظام لإلغاء الإيقاف فوراً.</td>
+  </tr>
+
+  <tr>
+    <td><b>نسيت كلمة مرور المدير</b></td>
+    <td>على الخادم:<br>
+        <code>venv\Scripts\python manage.py changepassword اسم_المستخدم</code></td>
+  </tr>
+
+  <tr>
+    <td><b>النظام توقّف فجأة</b></td>
+    <td>أُغلقت نافذة التشغيل. على Linux مع systemd يعود تلقائياً؛
+        على Windows أعد تشغيل <code>3-تشغيل-النظام.bat</code>.</td>
+  </tr>
+</table>
+
+
+<h2>مطابقة ملف Excel</h2>
+<p>تقارن كشفاً خارجياً بسجلات النظام وتُخرج تقريراً بالفروق.</p>
+<div class="box ok">
+  <b>العملية للقراءة فقط</b> — لا تضيف ولا تعدّل ولا تحذف أي سجل.
+  التقرير يوضّح ما يحتاج إجراءً، والتنفيذ يبقى قرارك.
+</div>
+<ul>
+  <li>المطابقة عبر <b>رقم الهوية</b>، وإن غاب فبـ<b>الرقم الوظيفي</b></li>
+  <li>ملف التصدير من النظام يصلح كملف إدخال مباشرة</li>
+  <li>زر <b>طباعة التقرير</b> يُخرج مستنداً رسمياً بترويسة وبيانات إصدار وحقول توقيع</li>
+  <li>لحفظه ملفاً: من نافذة الطباعة اختر <b>حفظ كـ PDF</b></li>
+</ul>
+
+
+<h2>الصيانة الدورية</h2>
+<table>
+  <tr><th>المهمة</th><th>التكرار</th></tr>
+  <tr><td>التأكد أن النسخة الاحتياطية تعمل</td><td>أسبوعياً</td></tr>
+  <tr><td>نقل النسخ إلى مكان خارج الخادم</td><td>أسبوعياً</td></tr>
+  <tr><td>مراجعة سجل النشاطات</td><td>شهرياً</td></tr>
+  <tr><td>مراجعة الحسابات وتعطيل غير المستخدم</td><td>كل 3 أشهر</td></tr>
+  <tr><td>تجربة الاستعادة من نسخة</td><td>كل 6 أشهر</td></tr>
+</table>
+
+<div class="box warn">
+  <b>سجل النشاطات يحفظ آخر 30 يوماً فقط.</b> إن احتجت أرشيفاً أطول
+  لأغراض المراجعة، اطبع السجل شهرياً أو احتفظ بالنسخ الاحتياطية.
+</div>
+
+
+<footer>
+  نظام إدارة الموارد البشرية — تجمع عسير الصحي · دليل التشغيل والصيانة
+</footer>
+
+</div>
+</body>
+</html>
