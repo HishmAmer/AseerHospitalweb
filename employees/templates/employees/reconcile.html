@@ -1,0 +1,480 @@
+{% extends 'employees/base.html' %}
+{% block title %}مطابقة ملف Excel{% endblock %}
+{% block page_title %}مطابقة ملف Excel مع بيانات الموظفين{% endblock %}
+
+{% block content %}
+<style>
+    .drop-zone {
+        display: block;          /* <label> سطري افتراضاً فلا يملأ العرض */
+        border: 2px dashed var(--border-strong);
+        border-radius: var(--r-lg);
+        background: var(--surface-sunken);
+        padding: 36px 24px;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color .18s ease, background-color .18s ease;
+    }
+    .drop-zone:hover, .drop-zone.is-hover {
+        border-color: var(--brand-600);
+        background: var(--brand-50);
+    }
+    .drop-zone .tint { width: 52px; height: 52px; font-size: 1.3rem; margin: 0 auto 14px; }
+    .drop-zone h3 { font-size: 1rem; font-weight: 800; margin: 0 0 6px; }
+    .drop-zone p { font-size: .8125rem; color: var(--text-muted); margin: 0; }
+    .drop-zone input[type="file"] { display: none; }
+
+    .picked-file {
+        display: none;
+        align-items: center; gap: 10px;
+        margin-top: 14px; padding: 11px 14px;
+        background: var(--brand-50);
+        border: 1px solid var(--brand-200);
+        border-radius: var(--r-md);
+        font-size: .875rem; font-weight: 700; color: var(--brand-900);
+    }
+    .picked-file.is-shown { display: flex; }
+
+    /* شريط الملخّص */
+    .summary-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px; margin-bottom: 22px;
+    }
+    .summary-tile {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--r-lg); padding: 15px;
+    }
+    .summary-tile .n {
+        font-size: 1.5rem; font-weight: 800; line-height: 1.1;
+        font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+        color: var(--text-strong);
+    }
+    .summary-tile .l { font-size: .75rem; font-weight: 600; color: var(--text-muted); margin-top: 4px; }
+    .summary-tile.is-danger { border-color: var(--danger-border); background: var(--danger-bg); }
+    .summary-tile.is-danger .n { color: #8A1D14; }
+    .summary-tile.is-warn { border-color: var(--warn-border); background: var(--warn-bg); }
+    .summary-tile.is-warn .n { color: #7A3B06; }
+    .summary-tile.is-ok { border-color: var(--ok-border); background: var(--ok-bg); }
+    .summary-tile.is-ok .n { color: #0A6B4A; }
+
+    .result-panel { margin-bottom: 18px; }
+    .result-panel .panel-header { padding: 15px 20px; }
+    .count-pill {
+        font-size: .75rem; font-weight: 800; padding: 2px 10px;
+        border-radius: var(--r-pill); background: var(--ink-100); color: var(--ink-600);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* جدول الاختلافات */
+    .diff-old { color: var(--danger); text-decoration: line-through; text-decoration-thickness: 1px; }
+    .diff-new { color: var(--ok); font-weight: 700; }
+    .diff-field { font-weight: 700; color: var(--text-strong); }
+    .diff-list { margin: 0; padding: 0; list-style: none; }
+    .diff-list li { padding: 4px 0; font-size: .8125rem; }
+    .diff-list li + li { border-top: 1px dashed var(--ink-200); }
+
+    .row-num {
+        font-size: .75rem; font-weight: 700; color: var(--text-faint);
+        font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+</style>
+
+<div style="max-width: 1080px; margin: 0 auto;">
+
+    <!-- ============ نموذج الرفع ============ -->
+    <form method="POST" enctype="multipart/form-data" class="panel mb-4" id="uploadForm">
+        {% csrf_token %}
+
+        <div class="panel-header">
+            <div>
+                <h2 class="panel-title">
+                    <span class="tint tint-brand"><i class="fas fa-file-import"></i></span>
+                    مطابقة ملف Excel
+                </h2>
+                <p style="font-size:.8125rem; color:var(--text-muted); margin:5px 0 0;">
+                    ارفع كشفاً بصيغة Excel لمقارنته بالسجلات المسجّلة في النظام.
+                </p>
+            </div>
+            <a href="{% url 'reconcile_template' %}" class="btn-app btn-outline-app">
+                <i class="fas fa-download"></i> تحميل قالب فارغ
+            </a>
+        </div>
+
+        <div class="panel-body">
+            <label class="drop-zone" id="dropZone" for="excelFile">
+                <span class="tint tint-brand"><i class="fas fa-file-excel"></i></span>
+                <h3>اختر ملف Excel أو أفلته هنا</h3>
+                <p>بصيغة ‎.xlsx‎ فقط — بحد أقصى 5 ميجابايت</p>
+                <input type="file" name="excel_file" id="excelFile" accept=".xlsx" required>
+            </label>
+
+            <div class="picked-file" id="pickedFile">
+                <i class="fas fa-paperclip"></i>
+                <span id="pickedName"></span>
+            </div>
+
+            <div class="alert-app alert-info-app mt-3" style="font-size:.8125rem;">
+                <i class="fas fa-circle-info me-1"></i>
+                المطابقة تتم عبر <strong>رقم الهوية</strong> وإن غاب فبـ<strong>الرقم الوظيفي</strong>،
+                وأحدهما مطلوب في الملف. العملية <strong>للقراءة فقط</strong> — لا يُعدَّل أي سجل،
+                والتقرير يوضّح ما يحتاج إلى إجراء منك.
+            </div>
+        </div>
+
+        <div class="panel-footer">
+            <button type="submit" class="btn-app btn-primary-app btn-lg-app">
+                <i class="fas fa-code-compare"></i> ابدأ المطابقة
+            </button>
+        </div>
+    </form>
+
+    {% if report %}
+    <!-- ============ الملخّص ============ -->
+    <h2 class="section-title">
+        <i class="fas fa-clipboard-check"></i>
+        نتيجة المطابقة
+        {% if file_name %}<span style="font-weight:600; color:var(--text-muted); font-size:.8125rem;">— {{ file_name }}</span>{% endif %}
+    </h2>
+
+    <div class="summary-grid">
+        <div class="summary-tile">
+            <div class="n">{{ report.total_rows }}</div>
+            <div class="l">صفوف في الملف</div>
+        </div>
+        <div class="summary-tile">
+            <div class="n">{{ report.total_system }}</div>
+            <div class="l">سجلات في النظام</div>
+        </div>
+        <div class="summary-tile is-ok">
+            <div class="n">{{ report.matched_count }}</div>
+            <div class="l">تطابقت</div>
+        </div>
+        <div class="summary-tile {% if report.missing_in_system %}is-danger{% endif %}">
+            <div class="n">{{ report.missing_in_system|length }}</div>
+            <div class="l">غير مسجّل في النظام</div>
+        </div>
+        <div class="summary-tile {% if report.missing_in_file %}is-warn{% endif %}">
+            <div class="n">{{ report.missing_in_file|length }}</div>
+            <div class="l">لم يرد في الملف</div>
+        </div>
+        <div class="summary-tile {% if report.differences %}is-warn{% endif %}">
+            <div class="n">{{ report.differences|length }}</div>
+            <div class="l">به اختلافات</div>
+        </div>
+    </div>
+
+    {% if report.truncated %}
+    <div class="alert-app alert-warn-app mb-3">
+        <i class="fas fa-triangle-exclamation me-1"></i>
+        الملف يتجاوز {{ report.max_rows }} صف، وتمت قراءة هذا العدد فقط. قسّم الملف وأعد المطابقة.
+    </div>
+    {% endif %}
+
+    {% if report.ignored_fields %}
+    <div class="alert-app alert-info-app mb-3" style="font-size:.8125rem;">
+        <i class="fas fa-circle-info me-1"></i>
+        أعمدة غير موجودة في الملف فلم تُقارَن:
+        <strong>{{ report.ignored_fields|join:"، " }}</strong>
+    </div>
+    {% endif %}
+
+    <!-- ============ 1. غير مسجّل في النظام ============ -->
+    <div class="panel result-panel">
+        <div class="panel-header">
+            <h2 class="panel-title">
+                <span class="tint tint-danger"><i class="fas fa-user-plus"></i></span>
+                في الملف وغير مسجّل في النظام
+                <span class="count-pill">{{ report.missing_in_system|length }}</span>
+            </h2>
+            {% if report.missing_in_system %}
+            <a href="{% url 'add_employee' %}" class="btn-app btn-primary-app btn-sm-app">
+                <i class="fas fa-plus"></i> إضافة موظف
+            </a>
+            {% endif %}
+        </div>
+
+        {% if report.missing_in_system %}
+        <div class="table-scroll">
+            <table class="premium-table">
+                <thead>
+                    <tr>
+                        <th>السطر</th>
+                        <th>اسم الموظف</th>
+                        <th>رقم الهوية</th>
+                        <th>الرقم الوظيفي</th>
+                        <th>المنشأة / القسم</th>
+                        <th>فئة الكادر</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in report.missing_in_system %}
+                    <tr>
+                        <td class="row-num">{{ item.row }}</td>
+                        <td class="cell-primary">{{ item.full_name }}</td>
+                        <td>{{ item.national_id }}</td>
+                        <td>{{ item.employee_number }}</td>
+                        <td>
+                            <div>{{ item.current_workplace }}</div>
+                            <div class="cell-secondary"><i class="fas fa-sitemap"></i> {{ item.current_department }}</div>
+                        </td>
+                        <td>{{ item.employee_category }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="tint tint-ok"><i class="fas fa-check"></i></div>
+            <h6>لا يوجد نقص</h6>
+            <p>كل من في الملف مسجّل في النظام.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ============ 2. لم يرد في الملف ============ -->
+    <div class="panel result-panel">
+        <div class="panel-header">
+            <h2 class="panel-title">
+                <span class="tint tint-warn"><i class="fas fa-user-minus"></i></span>
+                في النظام ولم يرد في الملف
+                <span class="count-pill">{{ report.missing_in_file|length }}</span>
+            </h2>
+        </div>
+
+        {% if report.missing_in_file %}
+        <div class="table-scroll">
+            <table class="premium-table">
+                <thead>
+                    <tr>
+                        <th>اسم الموظف</th>
+                        <th>رقم الهوية</th>
+                        <th>الرقم الوظيفي</th>
+                        <th>المنشأة / القسم</th>
+                        <th>الحالة</th>
+                        <th class="text-start">إجراء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emp in report.missing_in_file %}
+                    <tr>
+                        <td class="cell-primary">{{ emp.full_name }}</td>
+                        <td>{{ emp.national_id|default:"—" }}</td>
+                        <td>{{ emp.employee_number|default:"—" }}</td>
+                        <td>
+                            <div>{{ emp.current_workplace.name|default:"—" }}</div>
+                            <div class="cell-secondary"><i class="fas fa-sitemap"></i> {{ emp.current_department.name|default:"—" }}</div>
+                        </td>
+                        <td>
+                            {% if emp.status == 'نشط' %}
+                                <span class="badge-app badge-ok">نشط</span>
+                            {% elif emp.status == 'مستقيل' %}
+                                <span class="badge-app badge-warn">مستقيل</span>
+                            {% elif emp.status == 'طي القيد' %}
+                                <span class="badge-app badge-danger">طي القيد</span>
+                            {% else %}
+                                <span class="badge-app badge-info">{{ emp.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-start">
+                            <a href="{% url 'edit_employee' emp.pk %}" class="action-circle"
+                               title="مراجعة السجل" aria-label="مراجعة سجل {{ emp.full_name }}">
+                                <i class="fas fa-pen"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="tint tint-ok"><i class="fas fa-check"></i></div>
+            <h6>الكل موجود</h6>
+            <p>كل سجلات النظام واردة في الملف.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ============ 3. اختلافات ============ -->
+    {% if report.differences %}
+    <div class="panel result-panel">
+        <div class="panel-header">
+            <h2 class="panel-title">
+                <span class="tint tint-warn"><i class="fas fa-code-compare"></i></span>
+                اختلافات بين الملف والنظام
+                <span class="count-pill">{{ report.differences|length }}</span>
+            </h2>
+        </div>
+        <div class="table-scroll">
+            <table class="premium-table">
+                <thead>
+                    <tr>
+                        <th>السطر</th>
+                        <th>الموظف</th>
+                        <th>الحقول المختلفة</th>
+                        <th class="text-start">إجراء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in report.differences %}
+                    <tr>
+                        <td class="row-num">{{ item.row }}</td>
+                        <td>
+                            <div class="cell-primary">{{ item.employee.full_name }}</div>
+                            <div class="cell-secondary">{{ item.employee.national_id|default:"—" }}</div>
+                        </td>
+                        <td>
+                            <ul class="diff-list">
+                                {% for field in item.fields %}
+                                <li>
+                                    <span class="diff-field">{{ field.label }}:</span>
+                                    <span class="diff-old">{{ field.system }}</span>
+                                    <i class="fas fa-arrow-left mx-1" style="font-size:.6rem; color:var(--text-faint);"></i>
+                                    <span class="diff-new">{{ field.file }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                        <td class="text-start">
+                            <a href="{% url 'edit_employee' item.employee.pk %}" class="action-circle"
+                               title="تعديل السجل" aria-label="تعديل سجل {{ item.employee.full_name }}">
+                                <i class="fas fa-pen"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="panel-footer" style="justify-content: flex-start;">
+            <span style="font-size:.75rem; color:var(--text-muted);">
+                <span class="diff-old">الأحمر</span> = القيمة في النظام &nbsp;·&nbsp;
+                <span class="diff-new">الأخضر</span> = القيمة في الملف
+            </span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============ 4. سجلات ناقصة البيانات ============ -->
+    {% if report.incomplete %}
+    <div class="panel result-panel">
+        <div class="panel-header">
+            <h2 class="panel-title">
+                <span class="tint tint-neutral"><i class="fas fa-circle-exclamation"></i></span>
+                سجلات في النظام ناقصة بيانات
+                <span class="count-pill">{{ report.incomplete|length }}</span>
+            </h2>
+        </div>
+        <div class="table-scroll">
+            <table class="premium-table">
+                <thead>
+                    <tr>
+                        <th>الموظف</th>
+                        <th>الحقول الفارغة</th>
+                        <th class="text-start">إجراء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in report.incomplete %}
+                    <tr>
+                        <td class="cell-primary">{{ item.employee.full_name }}</td>
+                        <td>
+                            {% for blank in item.blanks %}
+                            <span class="badge-app badge-neutral mb-1">{{ blank }}</span>
+                            {% endfor %}
+                        </td>
+                        <td class="text-start">
+                            <a href="{% url 'edit_employee' item.employee.pk %}" class="action-circle"
+                               title="استكمال البيانات" aria-label="استكمال بيانات {{ item.employee.full_name }}">
+                                <i class="fas fa-pen"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============ 5. صفوف تعذّرت قراءتها ============ -->
+    {% if report.unreadable_rows %}
+    <div class="panel result-panel">
+        <div class="panel-header">
+            <h2 class="panel-title">
+                <span class="tint tint-danger"><i class="fas fa-file-circle-xmark"></i></span>
+                صفوف تعذّرت مطابقتها
+                <span class="count-pill">{{ report.unreadable_rows|length }}</span>
+            </h2>
+        </div>
+        <div class="table-scroll">
+            <table class="premium-table">
+                <thead>
+                    <tr><th>السطر</th><th>الاسم</th><th>السبب</th></tr>
+                </thead>
+                <tbody>
+                    {% for item in report.unreadable_rows %}
+                    <tr>
+                        <td class="row-num">{{ item.row }}</td>
+                        <td class="cell-primary">{{ item.name }}</td>
+                        <td style="color: var(--text-muted);">{{ item.reason }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="d-flex gap-2 flex-wrap mb-4">
+        <button type="button" class="btn-app btn-outline-app" onclick="window.print()">
+            <i class="fas fa-print"></i> طباعة التقرير
+        </button>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var zone = document.getElementById('dropZone');
+    var input = document.getElementById('excelFile');
+    var picked = document.getElementById('pickedFile');
+    var name = document.getElementById('pickedName');
+    if (!zone || !input) return;
+
+    function show() {
+        if (input.files.length) {
+            name.textContent = input.files[0].name;
+            picked.classList.add('is-shown');
+        } else {
+            picked.classList.remove('is-shown');
+        }
+    }
+
+    input.addEventListener('change', show);
+
+    // الإفلات المباشر على المنطقة
+    ['dragenter', 'dragover'].forEach(function (evt) {
+        zone.addEventListener(evt, function (e) {
+            e.preventDefault();
+            zone.classList.add('is-hover');
+        });
+    });
+    ['dragleave', 'drop'].forEach(function (evt) {
+        zone.addEventListener(evt, function (e) {
+            e.preventDefault();
+            zone.classList.remove('is-hover');
+        });
+    });
+    zone.addEventListener('drop', function (e) {
+        if (e.dataTransfer.files.length) {
+            input.files = e.dataTransfer.files;
+            show();
+        }
+    });
+});
+</script>
+{% endblock %}

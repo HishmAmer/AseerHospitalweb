@@ -17,6 +17,8 @@ urlpatterns = [
     path('employees/edit/<int:pk>/', views.edit_employee, name='edit_employee'),
     path('employees/delete/<int:pk>/', views.delete_employee, name='delete_employee'),
     path('employees/export/', views.export_employees_excel, name='export_employees_excel'), # الرابط الجديد
+    path('employees/reconcile/', views.reconcile_employees, name='reconcile_employees'),
+    path('employees/reconcile/template/', views.reconcile_template, name='reconcile_template'),
     # ==========================================
     # إدارة الإجازات
     # ==========================================
