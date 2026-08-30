@@ -392,3 +392,36 @@ class ExcelReconcileTests(SecurityTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn('spreadsheetml', response['Content-Type'])
+
+
+class NationalityChoicesTests(SimpleTestCase):
+    """قيم الجنسيات مفاتيح مخزَّنة في قاعدة البيانات، لا مجرد نصوص معروضة."""
+
+    LEGACY_VALUES = [
+        # عيّنة من القيم التي كانت مستخدمة قبل التوسعة. حذف أي منها أو
+        # تعديل نصّها يترك سجلات الموظفين المرتبطة بقيمة غير صالحة.
+        'سعودي', 'مصري', 'هندي', 'فلبيني', 'باكستاني', 'يمني', 'سوداني',
+        'أردني', 'سوري', 'بريطاني', 'أمريكي', 'كوري', 'كينى', 'مالي',
+        'كوت ديفوار', 'جنوب أفريقي', 'بدون جنسية', 'أخرى',
+    ]
+
+    def setUp(self):
+        self.values = [value for value, _ in Employee.NATIONALITY_CHOICES]
+
+    def test_legacy_values_are_never_dropped(self):
+        for value in self.LEGACY_VALUES:
+            with self.subTest(nationality=value):
+                self.assertIn(value, self.values)
+
+    def test_values_are_unique(self):
+        duplicates = {v for v in self.values if self.values.count(v) > 1}
+        self.assertEqual(duplicates, set())
+
+    def test_every_value_fits_the_column(self):
+        limit = Employee._meta.get_field('nationality').max_length
+        for value in self.values:
+            with self.subTest(nationality=value):
+                self.assertLessEqual(len(value), limit)
+
+    def test_default_is_a_valid_choice(self):
+        self.assertIn(Employee._meta.get_field('nationality').default, self.values)
