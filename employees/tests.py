@@ -6,6 +6,7 @@ from django.core.cache import cache
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
+from .forms import EmployeeForm
 from .models import Employee, Leave, UserProfile, Workplace
 
 
@@ -489,3 +490,90 @@ class OtherWorkplaceTests(SecurityTestCase):
         self.assertEqual(Workplace.objects.count(), before)
         self.assertEqual(Employee.objects.get(full_name='موظف جديد').current_workplace,
                          self.hospital_b)
+
+
+class OtherWorkplaceTypeTests(SecurityTestCase):
+    """خيار «أخرى» في نوع المنشأة: النص المكتوب يُخزَّن في الحقل نفسه."""
+
+    def payload(self, **overrides):
+        data = {
+            'full_name': 'موظف نوع مخصص',
+            'gender': 'M',
+            'nationality': 'سعودي',
+            'status': 'نشط',
+            'is_classified': 'غير مصنف',
+            'has_sub_specialty': 'لا',
+            'current_workplace': str(self.hospital_a.pk),
+            'workplace_type': '__other_type__',
+            'other_workplace_type': 'قطاع خاص',
+        }
+        data.update(overrides)
+        return data
+
+    def test_typed_type_is_stored_on_the_employee(self):
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        response = self.client.post(reverse('add_employee'), self.payload())
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            Employee.objects.get(full_name='موظف نوع مخصص').workplace_type, 'قطاع خاص'
+        )
+
+    def test_whitespace_is_collapsed(self):
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        self.client.post(reverse('add_employee'),
+                         self.payload(other_workplace_type='  قطاع   خاص  '))
+
+        self.assertEqual(
+            Employee.objects.get(full_name='موظف نوع مخصص').workplace_type, 'قطاع خاص'
+        )
+
+    def test_blank_typed_type_is_rejected(self):
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        response = self.client.post(reverse('add_employee'),
+                                    self.payload(other_workplace_type='  '))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('other_workplace_type', response.context['form'].errors)
+        self.assertFalse(Employee.objects.filter(full_name='موظف نوع مخصص').exists())
+
+    def test_listed_type_still_saves_normally(self):
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        self.client.post(reverse('add_employee'), self.payload(
+            workplace_type='مدن طبية', time_type='كلي',
+            other_workplace_type='يجب تجاهله',
+        ))
+
+        self.assertEqual(
+            Employee.objects.get(full_name='موظف نوع مخصص').workplace_type, 'مدن طبية'
+        )
+
+    def test_editing_a_custom_type_preselects_other(self):
+        """بدون هذا يظهر الحقل فارغاً فتضيع القيمة المحفوظة عند أول حفظ."""
+        employee = Employee.objects.create(
+            full_name='موظف قائم', gender='M',
+            current_workplace=self.hospital_a, workplace_type='قطاع خاص',
+        )
+        form = EmployeeForm(instance=employee, user=self.admin)
+
+        self.assertEqual(form.initial['workplace_type'], '__other_type__')
+        self.assertEqual(form.initial['other_workplace_type'], 'قطاع خاص')
+
+    def test_editing_a_listed_type_is_untouched(self):
+        employee = Employee.objects.create(
+            full_name='موظف قائم', gender='M',
+            current_workplace=self.hospital_a, workplace_type='مدن طبية',
+        )
+        form = EmployeeForm(instance=employee, user=self.admin)
+
+        self.assertNotIn('other_workplace_type', form.initial)
+
+    def test_branch_user_may_type_a_type(self):
+        """نوع المنشأة وصف لا يحدّد صلاحية، فلا سبب لحصره بمدير النظام."""
+        self.client.login(username='branch_a', password='Str0ngPass!2024')
+        response = self.client.post(reverse('add_employee'), self.payload())
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            Employee.objects.get(full_name='موظف نوع مخصص').workplace_type, 'قطاع خاص'
+        )

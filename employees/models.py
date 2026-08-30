@@ -157,7 +157,10 @@ class Employee(models.Model):
     gender = models.CharField(max_length=10, choices=(('M', 'ذكر'), ('F', 'أنثى')), verbose_name='الجنس')
     mobile_number = models.CharField(max_length=20, null=True, blank=True, verbose_name='رقم الجوال')
 
-    workplace_type = models.CharField(max_length=50, choices=WORKPLACE_TYPE_CHOICES, null=True, blank=True, verbose_name='نوع المنشأة')
+    # بلا choices على مستوى النموذج: الخيار «أخرى» في الواجهة يسمح بكتابة نوع
+    # غير مدرج، فيُخزَّن النص المكتوب هنا مباشرة. القائمة أعلاه تبني قائمة
+    # الاختيار في النموذج، والتحقق يتم هناك.
+    workplace_type = models.CharField(max_length=50, null=True, blank=True, verbose_name='نوع المنشأة')
     time_type = models.CharField(max_length=20, choices=TIME_TYPE_CHOICES, null=True, blank=True, verbose_name='التفرغ')
     current_workplace = models.ForeignKey(Workplace, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='المنشأة الحالية')
     current_department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='القسم الذي يعمل به')
