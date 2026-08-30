@@ -1,4 +1,5 @@
 {% extends 'employees/base.html' %}
+{% load static %}
 {% block title %}مطابقة ملف Excel{% endblock %}
 {% block page_title %}مطابقة ملف Excel مع بيانات الموظفين{% endblock %}
 
@@ -76,6 +77,184 @@
         font-size: .75rem; font-weight: 700; color: var(--text-faint);
         font-variant-numeric: tabular-nums; white-space: nowrap;
     }
+
+    /* عناصر تخصّ المستند المطبوع فقط */
+    .print-only { display: none; }
+
+    /* =====================================================================
+       المستند المطبوع
+       ===================================================================== */
+    @media print {
+        @page { size: A4; margin: 14mm 12mm 16mm; }
+
+        /* لا شيء من واجهة التطبيق يظهر في المستند */
+        .sidebar, .top-header, .nav-scrim, .toast-container,
+        #uploadForm, .summary-grid, .no-print { display: none !important; }
+
+        .main-wrapper { margin: 0 !important; }
+        .content-area { padding: 0 !important; }
+
+        body {
+            background: #fff;
+            font-size: 9.5pt;
+            line-height: 1.5;
+            color: #000;
+        }
+
+        .print-only { display: block; }
+
+        /* --- الترويسة الرسمية --- */
+        .letterhead {
+            display: flex; align-items: center; gap: 12px;
+            border-bottom: 2pt solid #0B2A3E;
+            padding-bottom: 8pt; margin-bottom: 12pt;
+        }
+        .letterhead img { width: 46pt; height: 46pt; object-fit: contain; }
+        .letterhead .org { flex-grow: 1; }
+        .letterhead .org strong {
+            display: block; font-size: 13pt; font-weight: 800; color: #0B2A3E; line-height: 1.2;
+        }
+        .letterhead .org span { font-size: 8.5pt; color: #47617A; }
+        .letterhead .doc-kind {
+            font-size: 8pt; font-weight: 700; color: #47617A;
+            border: 1pt solid #C3D1DD; border-radius: 3pt;
+            padding: 3pt 8pt; white-space: nowrap;
+        }
+
+        .doc-title {
+            font-size: 14pt; font-weight: 800; color: #0B2A3E;
+            text-align: center; margin: 0 0 10pt;
+        }
+
+        /* --- بطاقة بيانات الإصدار --- */
+        .doc-meta {
+            width: 100%; border-collapse: collapse; margin-bottom: 12pt;
+            font-size: 8.5pt;
+        }
+        .doc-meta th, .doc-meta td {
+            border: .5pt solid #C3D1DD; padding: 4pt 7pt; text-align: right;
+        }
+        .doc-meta th {
+            background: #F1F5F9 !important; font-weight: 700; color: #1E3A52;
+            width: 15%; white-space: nowrap;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        }
+
+        /* --- جدول الملخّص --- */
+        .print-summary {
+            width: 100%; border-collapse: collapse; margin-bottom: 14pt; font-size: 9pt;
+        }
+        .print-summary th, .print-summary td {
+            border: .5pt solid #C3D1DD; padding: 5pt 7pt; text-align: center;
+        }
+        .print-summary th {
+            background: #0B2A3E !important; color: #fff !important; font-weight: 700;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        }
+        .print-summary td { font-weight: 800; font-size: 11pt; }
+
+        /* --- الأقسام --- */
+        .panel {
+            border: none !important; box-shadow: none !important;
+            border-radius: 0 !important; margin-bottom: 12pt;
+            break-inside: auto;
+        }
+        /* الأقسام تتدفّق بلا فواصل قسرية — الفصل القسري كان يترك نصف صفحة
+           بيضاء بعد كل جدول قصير. العنوان لا ينفصل عن جدوله عبر break-after. */
+        .result-panel { break-before: auto; break-inside: auto; }
+
+        .panel-header {
+            border: none !important;
+            border-bottom: 1pt solid #0B2A3E !important;
+            padding: 0 0 5pt !important;
+            margin-bottom: 7pt;
+            background: transparent !important;
+            break-after: avoid;
+        }
+        .panel-title { font-size: 11pt !important; gap: 6pt !important; }
+        .panel-title .tint { display: none !important; }
+        .panel-footer { display: none !important; }
+        .count-pill {
+            background: #E1E9F0 !important; color: #1E3A52 !important;
+            border: .5pt solid #C3D1DD; font-size: 8pt;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        }
+
+        /* --- الجداول --- */
+        .table-scroll { overflow: visible !important; }
+        .premium-table { font-size: 8.5pt; }
+        /* ترويسة الجدول تتكرر في أعلى كل صفحة */
+        .premium-table thead { display: table-header-group; }
+        .premium-table tr { break-inside: avoid; }
+        .premium-table th {
+            background: #F1F5F9 !important; color: #1E3A52 !important;
+            border: .5pt solid #C3D1DD !important;
+            padding: 4pt 6pt !important; font-size: 8pt;
+            position: static !important;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        }
+        .premium-table td {
+            border: .5pt solid #DDE5EC !important;
+            padding: 4pt 6pt !important;
+            color: #000 !important;
+        }
+        .premium-table tbody tr:hover td { background: transparent !important; }
+        .cell-secondary { color: #47617A !important; font-size: 7.5pt; }
+        /* الأيقونات زينة شاشة — لا محل لها في مستند رسمي */
+        .cell-secondary i, .panel-title i, .alert-app i { display: none !important; }
+        /* عمود الإجراءات يُطبع فارغاً بعد إخفاء الأزرار */
+        .col-action { display: none !important; }
+
+        /* الشارات بحدود بدل خلفيات ثقيلة، مع إبقاء دلالة اللون */
+        .badge-app {
+            border: .5pt solid currentColor !important;
+            background: transparent !important;
+            padding: 1pt 5pt; font-size: 7.5pt;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        }
+        .badge-ok { color: #0A6B4A !important; }
+        .badge-warn { color: #7A3B06 !important; }
+        .badge-danger { color: #8A1D14 !important; }
+        .badge-info, .badge-neutral { color: #1E3A52 !important; }
+
+        .diff-old { color: #8A1D14 !important; }
+        .diff-new { color: #0A6B4A !important; }
+
+        /* --- الحالات الفارغة والتنبيهات --- */
+        .empty-state { padding: 10pt !important; text-align: right; }
+        .empty-state .tint { display: none !important; }
+        .empty-state h6 { font-size: 9.5pt; margin: 0; }
+        .empty-state p { font-size: 8.5pt; margin: 2pt 0 0; }
+
+        .alert-app {
+            border: .5pt solid #C3D1DD !important;
+            background: transparent !important;
+            color: #1E3A52 !important;
+            padding: 5pt 8pt !important;
+            font-size: 8pt;
+            border-radius: 0 !important;
+        }
+
+        /* --- التوقيعات --- */
+        .signatures {
+            break-inside: avoid;
+            margin-top: 18pt; padding-top: 10pt;
+            border-top: 1pt solid #C3D1DD;
+            display: flex; justify-content: space-between; gap: 20pt;
+        }
+        .signatures div { flex: 1; text-align: center; font-size: 8.5pt; }
+        .signatures .role { font-weight: 700; color: #1E3A52; margin-bottom: 26pt; }
+        .signatures .line { border-top: .5pt solid #47617A; padding-top: 3pt; color: #47617A; }
+
+        .doc-footer {
+            margin-top: 10pt; padding-top: 5pt;
+            border-top: .5pt solid #C3D1DD;
+            font-size: 7.5pt; color: #47617A; text-align: center;
+        }
+
+        a { color: #000 !important; text-decoration: none !important; }
+        .action-circle { display: none !important; }
+    }
 </style>
 
 <div style="max-width: 1080px; margin: 0 auto;">
@@ -128,8 +307,61 @@
     </form>
 
     {% if report %}
+
+    <!-- ============ ترويسة المستند المطبوع ============ -->
+    <div class="print-only">
+        <div class="letterhead">
+            <img src="{% static 'images/logo.svg' %}" alt="">
+            <div class="org">
+                <strong>تجمع عسير الصحي</strong>
+                <span>إدارة الموارد البشرية — إدارة المستشفيات والمراكز المتخصصة</span>
+            </div>
+            <div class="doc-kind">تقرير داخلي</div>
+        </div>
+
+        <h1 class="doc-title">تقرير مطابقة كشف Excel مع سجلات الموظفين</h1>
+
+        <table class="doc-meta">
+            <tr>
+                <th>اسم الملف</th>
+                <td>{{ file_name|default:"—" }}</td>
+                <th>نطاق التقرير</th>
+                <td>{{ scope_name }}</td>
+            </tr>
+            <tr>
+                <th>تاريخ الإصدار</th>
+                <td>{{ generated_at|date:"Y/m/d" }} — {{ generated_at|time:"H:i" }}</td>
+                <th>أصدره</th>
+                <td>{{ request.user.first_name|default:request.user.username }}</td>
+            </tr>
+        </table>
+
+        <table class="print-summary">
+            <thead>
+                <tr>
+                    <th>صفوف الملف</th>
+                    <th>سجلات النظام</th>
+                    <th>تطابقت</th>
+                    <th>غير مسجّل</th>
+                    <th>لم يرد في الملف</th>
+                    <th>به اختلافات</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ report.total_rows }}</td>
+                    <td>{{ report.total_system }}</td>
+                    <td>{{ report.matched_count }}</td>
+                    <td>{{ report.missing_in_system|length }}</td>
+                    <td>{{ report.missing_in_file|length }}</td>
+                    <td>{{ report.differences|length }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
     <!-- ============ الملخّص ============ -->
-    <h2 class="section-title">
+    <h2 class="section-title no-print">
         <i class="fas fa-clipboard-check"></i>
         نتيجة المطابقة
         {% if file_name %}<span style="font-weight:600; color:var(--text-muted); font-size:.8125rem;">— {{ file_name }}</span>{% endif %}
@@ -251,7 +483,7 @@
                         <th>الرقم الوظيفي</th>
                         <th>المنشأة / القسم</th>
                         <th>الحالة</th>
-                        <th class="text-start">إجراء</th>
+                        <th class="text-start col-action">إجراء</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -275,7 +507,7 @@
                                 <span class="badge-app badge-info">{{ emp.status }}</span>
                             {% endif %}
                         </td>
-                        <td class="text-start">
+                        <td class="text-start col-action">
                             <a href="{% url 'edit_employee' emp.pk %}" class="action-circle"
                                title="مراجعة السجل" aria-label="مراجعة سجل {{ emp.full_name }}">
                                 <i class="fas fa-pen"></i>
@@ -312,7 +544,7 @@
                         <th>السطر</th>
                         <th>الموظف</th>
                         <th>الحقول المختلفة</th>
-                        <th class="text-start">إجراء</th>
+                        <th class="text-start col-action">إجراء</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -335,7 +567,7 @@
                                 {% endfor %}
                             </ul>
                         </td>
-                        <td class="text-start">
+                        <td class="text-start col-action">
                             <a href="{% url 'edit_employee' item.employee.pk %}" class="action-circle"
                                title="تعديل السجل" aria-label="تعديل سجل {{ item.employee.full_name }}">
                                 <i class="fas fa-pen"></i>
@@ -371,7 +603,7 @@
                     <tr>
                         <th>الموظف</th>
                         <th>الحقول الفارغة</th>
-                        <th class="text-start">إجراء</th>
+                        <th class="text-start col-action">إجراء</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -383,7 +615,7 @@
                             <span class="badge-app badge-neutral mb-1">{{ blank }}</span>
                             {% endfor %}
                         </td>
-                        <td class="text-start">
+                        <td class="text-start col-action">
                             <a href="{% url 'edit_employee' item.employee.pk %}" class="action-circle"
                                title="استكمال البيانات" aria-label="استكمال بيانات {{ item.employee.full_name }}">
                                 <i class="fas fa-pen"></i>
@@ -426,10 +658,37 @@
     </div>
     {% endif %}
 
-    <div class="d-flex gap-2 flex-wrap mb-4">
-        <button type="button" class="btn-app btn-outline-app" onclick="window.print()">
+    <!-- ============ تذييل المستند المطبوع ============ -->
+    <div class="print-only">
+        <div class="signatures">
+            <div>
+                <div class="role">أعدّ التقرير</div>
+                <div class="line">{{ request.user.first_name|default:request.user.username }}</div>
+            </div>
+            <div>
+                <div class="role">راجعه</div>
+                <div class="line">الاسم والتوقيع</div>
+            </div>
+            <div>
+                <div class="role">اعتمده</div>
+                <div class="line">مدير الموارد البشرية</div>
+            </div>
+        </div>
+
+        <div class="doc-footer">
+            صدر آلياً من نظام إدارة الموارد البشرية — تجمع عسير الصحي
+            · {{ generated_at|date:"Y/m/d" }} {{ generated_at|time:"H:i" }}
+            · هذا التقرير للاطلاع ولا يُجري أي تعديل على السجلات
+        </div>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap mb-4 no-print">
+        <button type="button" class="btn-app btn-primary-app" onclick="window.print()">
             <i class="fas fa-print"></i> طباعة التقرير
         </button>
+        <span style="font-size:.75rem; color:var(--text-muted); align-self:center;">
+            يُطبع كمستند رسمي بترويسة وبيانات إصدار — واختَر «حفظ كـ PDF» من نافذة الطباعة للأرشفة.
+        </span>
     </div>
     {% endif %}
 
