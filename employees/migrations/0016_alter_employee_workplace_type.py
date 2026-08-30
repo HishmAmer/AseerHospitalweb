@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("employees", "0014_alter_employee_employee_type_and_more"),
+        ("employees", "0015_alter_employee_nationality"),
     ]
 
     operations = [
