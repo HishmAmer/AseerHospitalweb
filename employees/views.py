@@ -334,7 +334,11 @@ def reconcile_employees(request):
     مجلد الوسائط؛ يبقى في ذاكرة الطلب، وإن تجاوز FILE_UPLOAD_MAX_MEMORY_SIZE
     كتبه Django في ملف مؤقت يحذفه فور انتهاء الطلب.
     """
-    context = {'report': None}
+    context = {
+        'report': None,
+        'scope_name': scope_label(request.user),
+        'generated_at': timezone.localtime(),
+    }
 
     if request.method == 'POST':
         upload = request.FILES.get('excel_file')
