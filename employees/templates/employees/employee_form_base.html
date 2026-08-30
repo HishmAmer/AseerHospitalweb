@@ -137,6 +137,13 @@
                     {{ form.workplace_type }}
                 </div>
 
+                <div class="col-md-4 conditional-field" id="other-type-box" style="display:none;">
+                    <label class="form-label" for="{{ form.other_workplace_type.id_for_label }}">
+                        {{ form.other_workplace_type.label }}
+                    </label>
+                    {{ form.other_workplace_type }}
+                </div>
+
                 <div class="col-md-4 conditional-field" id="time-type-box" style="display:none;">
                     <label class="form-label" for="{{ form.time_type.id_for_label }}">{{ form.time_type.label }}</label>
                     {{ form.time_type }}
@@ -292,6 +299,10 @@ document.addEventListener("DOMContentLoaded", function () {
     // نوع المنشأة → التفرّغ
     bindConditional('id_workplace_type', 'time-type-box', 'id_time_type',
         function (c) { return c.value === 'مدن طبية' || c.value === 'جامعة الملك خالد'; });
+
+    // نوع المنشأة «أخرى» → كتابة النوع
+    bindConditional('id_workplace_type', 'other-type-box', 'id_other_workplace_type',
+        function (c) { return c.value === '__other_type__'; });
 
     // وجود تخصص دقيق → التخصص الدقيق
     bindConditional('id_has_sub_specialty', 'sub-specialty-box', 'id_sub_specialty',

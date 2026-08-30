@@ -7,6 +7,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
 
 OTHER_WORKPLACE = '__other__'
+OTHER_WORKPLACE_TYPE = '__other_type__'
 
 
 def normalize_workplace_name(name):
@@ -28,6 +29,12 @@ class WorkplaceChoiceField(forms.ModelChoiceField):
 
 
 class EmployeeForm(forms.ModelForm):
+    other_workplace_type = forms.CharField(
+        required=False,
+        max_length=50,
+        label='نوع المنشأة (اكتبه)',
+        widget=forms.TextInput(attrs={'placeholder': 'اكتب نوع المنشأة…'}),
+    )
     new_workplace_name = forms.CharField(
         required=False,
         max_length=150,
@@ -70,6 +77,22 @@ class EmployeeForm(forms.ModelForm):
             else:
                 field.widget.attrs['class'] = 'form-control'
         
+        # نوع المنشأة: قائمة ثابتة يُضاف إليها «أخرى» لكتابة نوع غير مدرج.
+        known_types = [(value, label) for value, label in Employee.WORKPLACE_TYPE_CHOICES]
+        self.fields['workplace_type'] = forms.ChoiceField(
+            required=False,
+            label=Employee._meta.get_field('workplace_type').verbose_name,
+            choices=[('', '--------- ')] + known_types + [(OTHER_WORKPLACE_TYPE, 'أخرى')],
+            widget=forms.Select(attrs={'class': 'form-select'}),
+        )
+
+        # عند تعديل موظف نوعه مكتوب يدوياً: تُختار «أخرى» ويُملأ الحقل النصي،
+        # وإلا ظهرت القائمة فارغة وضاعت القيمة المحفوظة عند أول حفظ.
+        saved_type = self.instance.workplace_type if self.instance else None
+        if saved_type and saved_type not in dict(known_types):
+            self.initial['workplace_type'] = OTHER_WORKPLACE_TYPE
+            self.initial['other_workplace_type'] = saved_type
+
         # استبدال حقل المنشأة بنسخة تقبل الخيار «أخرى»
         workplace_field = self.fields['current_workplace']
         self.fields['current_workplace'] = WorkplaceChoiceField(
@@ -111,6 +134,21 @@ class EmployeeForm(forms.ModelForm):
                     cleaned_data['new_workplace_name'] = name
         else:
             cleaned_data['new_workplace_name'] = ''
+
+        # 0-ب. نوع المنشأة: «أخرى» تعني تخزين النص المكتوب في الحقل نفسه.
+        if cleaned_data.get('workplace_type') == OTHER_WORKPLACE_TYPE:
+            typed = normalize_workplace_name(cleaned_data.get('other_workplace_type'))
+            if not typed:
+                self.add_error(
+                    'other_workplace_type',
+                    'اخترت «أخرى»، يرجى كتابة نوع المنشأة.',
+                )
+                cleaned_data['workplace_type'] = None
+            else:
+                cleaned_data['workplace_type'] = typed
+                cleaned_data['other_workplace_type'] = typed
+        else:
+            cleaned_data['other_workplace_type'] = ''
 
         # 1. تحقق التواريخ
         start_date = cleaned_data.get('contract_start_date')
