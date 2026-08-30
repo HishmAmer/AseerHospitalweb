@@ -1,10 +1,40 @@
+import re
+
 from django import forms
 from .models import Employee, Leave, Workplace, UserProfile
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
 
+OTHER_WORKPLACE = '__other__'
+
+
+def normalize_workplace_name(name):
+    """يوحّد المسافات حتى لا تتكرر المنشأة بفروق شكلية فقط."""
+    return re.sub(r'\s+', ' ', (name or '')).strip()
+
+
+class WorkplaceChoiceField(forms.ModelChoiceField):
+    """حقل منشأة يقبل الخيار «أخرى» ويترك حسمه إلى clean() في النموذج.
+
+    ModelChoiceField يرفض أي قيمة ليست مفتاحاً في الجدول، فلولا هذا
+    التجاوز لرُفض الخيار قبل أن يصل إلى منطق النموذج.
+    """
+
+    def to_python(self, value):
+        if value == OTHER_WORKPLACE:
+            return None
+        return super().to_python(value)
+
+
 class EmployeeForm(forms.ModelForm):
+    new_workplace_name = forms.CharField(
+        required=False,
+        max_length=150,
+        label='اسم المنشأة الجديدة',
+        widget=forms.TextInput(attrs={'placeholder': 'اكتب اسم المنشأة كاملاً…'}),
+    )
+
     class Meta:
         model = Employee
         exclude = ['is_deleted', 'created_at', 'updated_at']
@@ -40,14 +70,48 @@ class EmployeeForm(forms.ModelForm):
             else:
                 field.widget.attrs['class'] = 'form-control'
         
+        # استبدال حقل المنشأة بنسخة تقبل الخيار «أخرى»
+        workplace_field = self.fields['current_workplace']
+        self.fields['current_workplace'] = WorkplaceChoiceField(
+            queryset=workplace_field.queryset,
+            required=False,
+            label=workplace_field.label,
+            empty_label=workplace_field.empty_label,
+            widget=forms.Select(attrs={'class': 'form-select'}),
+        )
+
         if self.user and not self.user.is_superuser:
             if hasattr(self.user, 'profile') and self.user.profile.workplace:
                 self.fields['current_workplace'].queryset = Workplace.objects.filter(id=self.user.profile.workplace.id)
                 self.fields['current_workplace'].initial = self.user.profile.workplace
+        elif self.user and self.user.is_superuser:
+            # «أخرى» لمدير النظام وحده: مستخدم الفرع محصور بمنشأته، ولو أنشأ
+            # موظفاً في منشأة أخرى لاختفى عنه فوراً بحكم نطاق الصلاحيات.
+            field = self.fields['current_workplace']
+            field.widget.choices = list(field.choices) + [
+                (OTHER_WORKPLACE, 'أخرى — منشأة غير مدرجة'),
+            ]
 
     def clean(self):
         cleaned_data = super().clean()
-        
+
+        # 0. المنشأة: الخيار «أخرى» يعني إنشاء منشأة باسم مكتوب.
+        # الإنشاء مؤجَّل إلى save() حتى لا يبقى سجل معلّق إذا فشل التحقق لاحقاً.
+        if self.data.get('current_workplace') == OTHER_WORKPLACE:
+            if not (self.user and self.user.is_superuser):
+                self.add_error('current_workplace', 'غير مصرح لك بإضافة منشأة جديدة.')
+            else:
+                name = normalize_workplace_name(cleaned_data.get('new_workplace_name'))
+                if not name:
+                    self.add_error(
+                        'new_workplace_name',
+                        'اخترت «أخرى»، يرجى كتابة اسم المنشأة.',
+                    )
+                else:
+                    cleaned_data['new_workplace_name'] = name
+        else:
+            cleaned_data['new_workplace_name'] = ''
+
         # 1. تحقق التواريخ
         start_date = cleaned_data.get('contract_start_date')
         end_date = cleaned_data.get('contract_end_date')
@@ -80,6 +144,17 @@ class EmployeeForm(forms.ModelForm):
             cleaned_data['sub_specialty'] = None
 
         return cleaned_data
+
+    def save(self, commit=True):
+        """يُنشئ المنشأة المكتوبة عند الحفظ، أو يعيد استخدام منشأة قائمة بنفس الاسم."""
+        name = self.cleaned_data.get('new_workplace_name')
+        if name:
+            workplace = Workplace.objects.filter(name__iexact=name).first()
+            if workplace is None:
+                workplace = Workplace.objects.create(name=name)
+            self.instance.current_workplace = workplace
+        return super().save(commit=commit)
+
 
 class LeaveForm(forms.ModelForm):
     class Meta:

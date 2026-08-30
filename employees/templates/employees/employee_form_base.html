@@ -146,6 +146,16 @@
                     <label class="form-label" for="{{ form.current_workplace.id_for_label }}">{{ form.current_workplace.label }}</label>
                     {{ form.current_workplace }}
                 </div>
+
+                <div class="col-md-4 conditional-field" id="new-workplace-box" style="display:none;">
+                    <label class="form-label" for="{{ form.new_workplace_name.id_for_label }}">
+                        {{ form.new_workplace_name.label }}
+                    </label>
+                    {{ form.new_workplace_name }}
+                    <div style="font-size:.75rem; color:var(--text-faint); margin-top:5px; font-weight:600;">
+                        تُضاف إلى قائمة المنشآت وتصبح متاحة للاختيار لاحقاً.
+                    </div>
+                </div>
                 <div class="col-md-4">
                     <label class="form-label" for="{{ form.current_department.id_for_label }}">{{ form.current_department.label }}</label>
                     {{ form.current_department }}
@@ -286,6 +296,10 @@ document.addEventListener("DOMContentLoaded", function () {
     // وجود تخصص دقيق → التخصص الدقيق
     bindConditional('id_has_sub_specialty', 'sub-specialty-box', 'id_sub_specialty',
         function (c) { return c.value === 'نعم'; });
+
+    // المنشأة «أخرى» → كتابة اسم منشأة جديدة
+    bindConditional('id_current_workplace', 'new-workplace-box', 'id_new_workplace_name',
+        function (c) { return c.value === '__other__'; });
 });
 </script>
 {% endblock %}

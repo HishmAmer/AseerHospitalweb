@@ -392,3 +392,100 @@ class ExcelReconcileTests(SecurityTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn('spreadsheetml', response['Content-Type'])
+
+
+class OtherWorkplaceTests(SecurityTestCase):
+    """خيار «أخرى» في المنشأة الحالية: يُنشئ منشأة حقيقية، ولمدير النظام وحده."""
+
+    def base_payload(self, **overrides):
+        payload = {
+            'full_name': 'موظف جديد',
+            'gender': 'M',
+            'nationality': 'سعودي',
+            'status': 'نشط',
+            'is_classified': 'غير مصنف',
+            'has_sub_specialty': 'لا',
+            'current_workplace': '__other__',
+            'new_workplace_name': 'مستشفى خميس مشيط العام',
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_admin_creates_the_workplace_by_name(self):
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        response = self.client.post(reverse('add_employee'), self.base_payload())
+
+        self.assertEqual(response.status_code, 302)
+        workplace = Workplace.objects.get(name='مستشفى خميس مشيط العام')
+        employee = Employee.objects.get(full_name='موظف جديد')
+        self.assertEqual(employee.current_workplace, workplace)
+
+    def test_existing_workplace_is_reused_not_duplicated(self):
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        self.client.post(self.base_payload_url(), self.base_payload(
+            new_workplace_name='  مستشفى   أ  '))          # مسافات زائدة
+
+        self.assertEqual(Workplace.objects.filter(name__iexact='مستشفى أ').count(), 1)
+        self.assertEqual(Employee.objects.get(full_name='موظف جديد').current_workplace,
+                         self.hospital_a)
+
+    def base_payload_url(self):
+        return reverse('add_employee')
+
+    def test_blank_name_is_rejected(self):
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        response = self.client.post(
+            reverse('add_employee'), self.base_payload(new_workplace_name='   ')
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Employee.objects.filter(full_name='موظف جديد').exists())
+        self.assertIn('new_workplace_name', response.context['form'].errors)
+
+    def test_nothing_is_created_when_another_field_fails(self):
+        """المنشأة تُنشأ عند الحفظ لا أثناء التحقق، فلا تبقى معلّقة عند الفشل."""
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        before = Workplace.objects.count()
+        response = self.client.post(reverse('add_employee'), self.base_payload(
+            full_name='',                                   # حقل مطلوب فارغ
+            new_workplace_name='منشأة لا يجب أن تُنشأ',
+        ))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Workplace.objects.count(), before)
+        self.assertFalse(Workplace.objects.filter(name='منشأة لا يجب أن تُنشأ').exists())
+
+    def test_branch_user_cannot_use_other(self):
+        """مستخدم الفرع محصور بمنشأته — وإلا أنشأ موظفاً يختفي عنه فوراً."""
+        self.client.login(username='branch_a', password='Str0ngPass!2024')
+        before = Workplace.objects.count()
+        response = self.client.post(reverse('add_employee'), self.base_payload())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Workplace.objects.count(), before)
+        self.assertFalse(Employee.objects.filter(full_name='موظف جديد').exists())
+
+    def test_option_is_absent_for_a_branch_user(self):
+        # النص يرد في سكربت الصفحة لكل المستخدمين؛ المهم غيابه كخيار في القائمة.
+        self.client.login(username='branch_a', password='Str0ngPass!2024')
+        self.assertNotContains(
+            self.client.get(reverse('add_employee')), 'value="__other__"'
+        )
+
+    def test_option_is_offered_to_the_admin(self):
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        self.assertContains(
+            self.client.get(reverse('add_employee')), 'value="__other__"'
+        )
+
+    def test_normal_selection_still_works(self):
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        before = Workplace.objects.count()
+        self.client.post(reverse('add_employee'), self.base_payload(
+            current_workplace=str(self.hospital_b.pk),
+            new_workplace_name='لا يجب استخدامه',
+        ))
+
+        self.assertEqual(Workplace.objects.count(), before)
+        self.assertEqual(Employee.objects.get(full_name='موظف جديد').current_workplace,
+                         self.hospital_b)
