@@ -57,7 +57,7 @@ def as_origin(value, default_scheme):
 # ==========================================
 # 1. إعدادات الأمان (Security)
 # ==========================================
-DEBUG = env_bool('DJANGO_DEBUG', False)
+DEBUG = env_bool('DJANGO_DEBUG', True)
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 if not SECRET_KEY:
@@ -222,8 +222,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 if not DEBUG:
     STORAGES = {
         'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
-        'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
-    }
+        'staticfiles': {'BACKEND': 'core.storage.ResilientStaticFilesStorage'},    }
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
