@@ -39,6 +39,7 @@ SETTING_ITEM_MODELS = {
     'department': Department,
 }
 
+
 def superuser_required(view):
     """يقصر العرض على مدير النظام.
 
