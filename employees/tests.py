@@ -577,3 +577,106 @@ class OtherWorkplaceTypeTests(SecurityTestCase):
         self.assertEqual(
             Employee.objects.get(full_name='موظف نوع مخصص').workplace_type, 'قطاع خاص'
         )
+
+
+class ContractDatesByEmployeeTypeTests(SecurityTestCase):
+    """تواريخ العقد تتبع «فئة الموظف» لا «فئة الموظف (الكادر)».
+
+    خدمة مدنية: لا عقد، فأي تاريخ يُرسل يُمحى.
+    غير ذلك:    تاريخ نهاية العقد إلزامي.
+    """
+
+    def payload(self, **overrides):
+        data = {
+            'full_name': 'موظف عقد',
+            'gender': 'M',
+            'nationality': 'سعودي',
+            'status': 'نشط',
+            'is_classified': 'غير مصنف',
+            'has_sub_specialty': 'لا',
+            'current_workplace': self.hospital_a.pk,
+        }
+        data.update(overrides)
+        return data
+
+    def test_civil_service_saves_without_contract_dates(self):
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        response = self.client.post(
+            reverse('add_employee'), self.payload(employee_type='خدمة مدنية')
+        )
+
+        self.assertEqual(response.status_code, 302)
+        employee = Employee.objects.get(full_name='موظف عقد')
+        self.assertIsNone(employee.contract_end_date)
+
+    def test_civil_service_discards_dates_sent_anyway(self):
+        """الإخفاء في المتصفح لا يمنع إرسال الحقلين يدوياً."""
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        self.client.post(reverse('add_employee'), self.payload(
+            employee_type='خدمة مدنية',
+            contract_start_date='2026-01-01',
+            contract_end_date='2026-12-31',
+        ))
+
+        employee = Employee.objects.get(full_name='موظف عقد')
+        self.assertIsNone(employee.contract_start_date)
+        self.assertIsNone(employee.contract_end_date)
+
+    def test_other_type_requires_an_end_date(self):
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        response = self.client.post(
+            reverse('add_employee'), self.payload(employee_type='تشغيل ذاتي')
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Employee.objects.filter(full_name='موظف عقد').exists())
+        self.assertIn('contract_end_date', response.context['form'].errors)
+
+    def test_other_type_saves_with_an_end_date(self):
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        response = self.client.post(reverse('add_employee'), self.payload(
+            employee_type='تشغيل ذاتي',
+            contract_start_date='2026-01-01',
+            contract_end_date='2026-12-31',
+        ))
+
+        self.assertEqual(response.status_code, 302)
+        employee = Employee.objects.get(full_name='موظف عقد')
+        self.assertEqual(str(employee.contract_end_date), '2026-12-31')
+
+    def test_blank_type_requires_nothing(self):
+        """الحقل نفسه اختياري، فلا يُلزم من تركه فارغاً بتاريخ عقد."""
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        response = self.client.post(reverse('add_employee'), self.payload())
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIsNone(Employee.objects.get(full_name='موظف عقد').contract_end_date)
+
+    def test_end_before_start_is_still_rejected(self):
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        response = self.client.post(reverse('add_employee'), self.payload(
+            employee_type='تشغيل ذاتي',
+            contract_start_date='2026-12-31',
+            contract_end_date='2026-01-01',
+        ))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('contract_end_date', response.context['form'].errors)
+
+    def test_switching_to_civil_service_clears_stored_dates(self):
+        """موظف بعقد قائم غُيِّرت فئته: لا تبقى تواريخ عقد معلّقة."""
+        employee = Employee.objects.create(
+            full_name='موظف قائم', gender='M', current_workplace=self.hospital_a,
+            employee_type='تشغيل ذاتي',
+            contract_start_date='2025-01-01', contract_end_date='2025-12-31',
+        )
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        response = self.client.post(
+            reverse('edit_employee', args=[employee.pk]),
+            self.payload(full_name='موظف قائم', employee_type='خدمة مدنية'),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        employee.refresh_from_db()
+        self.assertIsNone(employee.contract_start_date)
+        self.assertIsNone(employee.contract_end_date)

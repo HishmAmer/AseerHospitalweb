@@ -219,12 +219,15 @@
                     <label class="form-label" for="{{ form.contract_job_title.id_for_label }}">{{ form.contract_job_title.label }}</label>
                     {{ form.contract_job_title }}
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-6 conditional-field" id="contract-start-box" style="display:none;">
                     <label class="form-label" for="{{ form.contract_start_date.id_for_label }}">{{ form.contract_start_date.label }}</label>
                     {{ form.contract_start_date }}
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label" for="{{ form.contract_end_date.id_for_label }}">{{ form.contract_end_date.label }}</label>
+                <div class="col-md-6 conditional-field" id="contract-end-box" style="display:none;">
+                    <label class="form-label" for="{{ form.contract_end_date.id_for_label }}">
+                        {{ form.contract_end_date.label }}
+                        <span id="contract-end-required" style="color:var(--danger); display:none;">*</span>
+                    </label>
                     {{ form.contract_end_date }}
                 </div>
 
@@ -311,6 +314,30 @@ document.addEventListener("DOMContentLoaded", function () {
     // المنشأة «أخرى» → كتابة اسم منشأة جديدة
     bindConditional('id_current_workplace', 'new-workplace-box', 'id_new_workplace_name',
         function (c) { return c.value === '__other__'; });
+
+    // فئة الموظف → تواريخ العقد.
+    // موظف الخدمة المدنية لا عقد له، فيختفي التاريخان وتُفرَّغ قيمتهما.
+    var notCivilService = function (c) { return c.value !== 'خدمة مدنية'; };
+    bindConditional('id_employee_type', 'contract-start-box', 'id_contract_start_date', notCivilService);
+    bindConditional('id_employee_type', 'contract-end-box', 'id_contract_end_date', notCivilService);
+
+    // ولغير الخدمة المدنية تاريخ النهاية إلزامي. تُرفع صفة required
+    // عند الإخفاء، وإلا رفض المتصفح الإرسال بسبب حقل لا يراه المستخدم.
+    (function () {
+        var type = document.getElementById('id_employee_type');
+        var end  = document.getElementById('id_contract_end_date');
+        var star = document.getElementById('contract-end-required');
+        if (!type || !end) return;
+
+        function apply() {
+            var required = type.value !== '' && type.value !== 'خدمة مدنية';
+            end.required = required;
+            if (star) star.style.display = required ? '' : 'none';
+        }
+
+        apply();
+        type.addEventListener('change', apply);
+    })();
 });
 </script>
 {% endblock %}
