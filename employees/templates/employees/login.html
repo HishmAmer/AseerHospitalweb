@@ -18,164 +18,141 @@
 
     <style>
     :root {
-        --brand-50:  #EFF9FE;
         --brand-100: #D9F0FB;
         --brand-200: #B3E2F6;
         --brand-300: #7CCDEF;
-        --brand-400: #3FB2E4;
         --brand-600: #0088C6;
-        --brand-700: #007BB4;
-        --brand-800: #006391;
+        --brand-btn-top: #007DB6;   /* طرفا التدرّج يحققان تباين AA */
+        --brand-btn-btm: #00618F;   /* مع النص الأبيض */
 
-        --nav-bg: #0B2A3E;
-        --nav-bg-deep: #061A28;
+        --navy-1: #0F3F5C;
+        --navy-2: #0B2A3E;
+        --navy-3: #061A28;
 
         --ink-900: #0B1F2E;
         --ink-800: #12293C;
         --ink-700: #1E3A52;
-        --ink-500: #6B8299;
-        --ink-400: #94A8BA;   /* حدود وأيقونات فقط — يرسب كنص */
-        --ink-450: #5F7689;   /* أفتح لون يصلح نصاً ثانوياً (4.73:1) */
+        --ink-450: #5F7689;   /* أفتح لون يصلح نصاً على أبيض (4.73:1) */
+        --ink-400: #94A8BA;   /* حدود وأيقونات فقط */
         --ink-300: #C3D1DD;
         --ink-200: #E1E9F0;
         --ink-100: #EFF3F7;
         --ink-50:  #F6F9FB;
 
-        --danger: #D92D20;
         --danger-bg: #FDECEA;
         --danger-border: #F5B5B0;
+        --danger-ink: #8A1D14;
 
-        --r-sm: 8px;
         --r-md: 11px;
         --r-lg: 16px;
-        --r-xl: 22px;
+        --r-xl: 24px;
     }
 
     * { box-sizing: border-box; }
 
+    /* =====================================================
+       خلفية مؤسسية تملأ الشاشة
+       ===================================================== */
     body {
         font-family: 'Cairo', system-ui, -apple-system, 'Segoe UI', sans-serif;
         margin: 0;
         min-height: 100vh;
-        background: var(--ink-50);
         color: var(--ink-700);
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        display: grid;
-        grid-template-columns: 1.08fr .92fr;
+
+        background:
+            radial-gradient(ellipse 900px 520px at 78% 8%,  rgba(0,136,198,.34), transparent 62%),
+            radial-gradient(ellipse 760px 480px at 12% 92%, rgba(63,178,228,.18), transparent 62%),
+            linear-gradient(158deg, var(--navy-1) 0%, var(--navy-2) 46%, var(--navy-3) 100%);
+        background-attachment: fixed;
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+    }
+
+    /* شبكة نقطية خفيفة تكسر صمت الخلفية دون ضجيج */
+    body::before {
+        content: '';
+        position: fixed; inset: 0;
+        background-image: radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px);
+        background-size: 22px 22px;
+        pointer-events: none;
     }
 
     /* =====================================================
-       شعارا الجهتين — قفل بصري واحد
+       البطاقة
        ===================================================== */
+    .auth-card {
+        position: relative;
+        width: 100%; max-width: 430px;
+        background: #fff;
+        border-radius: var(--r-xl);
+        overflow: hidden;
+        box-shadow:
+            0 2px 4px rgba(3,14,22,.10),
+            0 24px 60px rgba(3,14,22,.34);
+        animation: rise .45s cubic-bezier(.2,.7,.3,1);
+    }
+    @keyframes rise {
+        from { opacity: 0; transform: translateY(14px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* شريط لوني رفيع يعلو البطاقة */
+    .card-crest {
+        height: 5px;
+        background: linear-gradient(90deg, var(--brand-600), var(--brand-300), var(--brand-600));
+    }
+
+    /* ------- رأس البطاقة: الشعاران ------- */
+    .card-head {
+        padding: 30px 34px 24px;
+        text-align: center;
+        background: linear-gradient(180deg, var(--ink-50) 0%, #fff 100%);
+        border-bottom: 1px solid var(--ink-100);
+    }
+
     .logo-lockup {
         display: inline-flex;
         align-items: center;
         gap: 20px;
-        background: #fff;
-        border-radius: var(--r-lg);
-        padding: 15px 22px;
-        box-shadow: 0 8px 22px rgba(6,26,40,.16);
+        margin-bottom: 18px;
     }
     /* الارتفاع يحكم المقاس: شعار عسير يحمل نصاً داخله فيحتاج مساحة
-       كافية ليبقى مقروءاً، والثاني يتمدّد بنفس الارتفاع دون تشويه. */
-    .logo-slot {
-        display: flex; align-items: center; justify-content: center;
-        height: 58px;
-    }
-    .logo-slot img { height: 100%; width: auto; max-width: 120px; object-fit: contain; display: block; }
-    .logo-rule { width: 1px; align-self: stretch; margin: 4px 0; background: var(--ink-200); }
+       ليبقى مقروءاً، والثاني يتمدّد بنفس الارتفاع دون تشويه. */
+    .logo-slot { display: flex; align-items: center; justify-content: center; height: 56px; }
+    .logo-slot img { height: 100%; width: auto; max-width: 118px; object-fit: contain; display: block; }
+    .logo-rule { width: 1px; align-self: stretch; margin: 6px 0; background: var(--ink-200); }
 
-    /* =====================================================
-       اللوحة التعريفية
-       ===================================================== */
-    .brand-panel {
-        background: linear-gradient(158deg, #124A6B 0%, var(--nav-bg) 38%, var(--nav-bg-deep) 100%);
-        color: #fff;
-        padding: 54px 58px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        position: relative;
-        overflow: hidden;
+    .org-name {
+        font-size: 1.15rem; font-weight: 800; color: var(--ink-900);
+        margin: 0 0 5px; letter-spacing: -.02em;
     }
-    .brand-panel::before,
-    .brand-panel::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none; }
-    .brand-panel::before {
-        width: 640px; height: 640px;
-        background: radial-gradient(circle, rgba(0,136,198,.32) 0%, transparent 68%);
-        top: -250px; left: -200px;
-    }
-    .brand-panel::after {
-        width: 480px; height: 480px;
-        background: radial-gradient(circle, rgba(63,178,228,.15) 0%, transparent 68%);
-        bottom: -200px; right: -130px;
-    }
-    .brand-panel > * { position: relative; z-index: 1; }
-
-    .brand-panel h1 {
-        font-size: 2.05rem; font-weight: 800; line-height: 1.28;
-        margin: 32px 0 14px; letter-spacing: -.025em;
-    }
-    .brand-panel .lede {
-        font-size: 1rem; font-weight: 500; line-height: 1.8;
-        color: #A9C1D2; margin: 0; max-width: 44ch;
+    .org-sub {
+        font-size: .8125rem; font-weight: 600; color: var(--ink-450);
+        margin: 0; letter-spacing: .01em;
     }
 
-    .feature-list { list-style: none; padding: 0; margin: 38px 0 0; }
-    .feature-list li {
-        display: flex; align-items: center; gap: 14px;
-        font-size: .9375rem; font-weight: 600;
-        color: #C7D8E5;
-        padding: 8px 0;
+    /* ------- جسم البطاقة ------- */
+    .card-body { padding: 28px 34px 30px; }
+
+    .form-title {
+        font-size: 1.0625rem; font-weight: 800; color: var(--ink-900);
+        margin: 0 0 22px; text-align: center;
+        position: relative; padding-bottom: 14px;
     }
-    .feature-list i {
-        width: 36px; height: 36px; flex-shrink: 0;
-        border-radius: 10px;
-        background: rgba(255,255,255,.06);
-        border: 1px solid rgba(255,255,255,.10);
-        display: inline-flex; align-items: center; justify-content: center;
-        color: var(--brand-300);
-        font-size: .875rem;
+    .form-title::after {
+        content: ''; position: absolute;
+        bottom: 0; right: 50%; transform: translateX(50%);
+        width: 42px; height: 3px; border-radius: 3px;
+        background: var(--brand-600);
     }
 
-    .brand-footer {
-        font-size: .8125rem; font-weight: 500;
-        color: #7794AA;
-        border-top: 1px solid rgba(255,255,255,.09);
-        padding-top: 22px;
-    }
-
-    /* =====================================================
-       نموذج الدخول
-       ===================================================== */
-    .form-panel {
-        display: flex; align-items: center; justify-content: center;
-        padding: 48px 40px;
-        background: var(--ink-50);
-    }
-
-    .form-card {
-        width: 100%; max-width: 400px;
-        background: #fff;
-        border: 1px solid var(--ink-200);
-        border-radius: var(--r-xl);
-        padding: 40px 36px 32px;
-        box-shadow: 0 1px 2px rgba(11,31,46,.04), 0 14px 34px rgba(11,31,46,.07);
-    }
-
-    .form-card > .logo-lockup { display: none; }
-
-    .form-head { margin-bottom: 30px; }
-    .form-head h2 {
-        font-size: 1.5rem; font-weight: 800; color: var(--ink-900);
-        margin: 0 0 7px; letter-spacing: -.02em;
-    }
-    .form-head p {
-        font-size: .9375rem; color: var(--ink-450); font-weight: 500; margin: 0;
-    }
-
-    .field { margin-bottom: 17px; }
+    .field { margin-bottom: 16px; }
     .field label {
         display: block;
         font-size: .8125rem; font-weight: 700; color: var(--ink-800);
@@ -193,7 +170,7 @@
     .field input {
         width: 100%;
         border-radius: var(--r-md);
-        border: 1px solid var(--ink-200);
+        border: 1.5px solid var(--ink-200);
         background: var(--ink-50);
         padding: 13px 44px 13px 15px;
         font-family: inherit;
@@ -217,15 +194,14 @@
         display: flex; align-items: center; justify-content: center;
         border: none; background: transparent;
         color: var(--ink-400); cursor: pointer;
-        border-radius: var(--r-sm); font-size: .8125rem;
+        border-radius: 8px; font-size: .8125rem;
         transition: color .18s ease, background-color .18s ease;
     }
     .peek:hover { color: var(--ink-700); background: var(--ink-100); }
 
-    /* تنبيه Caps Lock — سبب شائع لفشل الدخول */
+    /* Caps Lock سبب شائع لفشل الدخول دون سبب ظاهر */
     .caps-hint {
-        display: none;
-        align-items: center; gap: 7px;
+        display: none; align-items: center; gap: 7px;
         margin-top: 8px;
         font-size: .75rem; font-weight: 700; color: #8A5A06;
     }
@@ -235,65 +211,69 @@
         width: 100%;
         border: none;
         border-radius: var(--r-md);
-        /* طرفا التدرّج يحققان تباين AA مع النص الأبيض — brand-600 لا يحققه */
-        background: linear-gradient(180deg, #007DB6 0%, #00618F 100%);
+        background: linear-gradient(180deg, var(--brand-btn-top) 0%, var(--brand-btn-btm) 100%);
         color: #fff;
         padding: 14px;
         font-family: inherit;
         font-size: .9375rem; font-weight: 800;
         cursor: pointer;
         display: flex; align-items: center; justify-content: center; gap: 10px;
-        margin-top: 22px;
-        box-shadow: 0 4px 12px rgba(0,123,180,.24);
+        margin-top: 24px;
+        box-shadow: 0 4px 14px rgba(0,97,143,.30);
         transition: filter .18s ease, box-shadow .18s ease, transform .12s ease;
     }
-    .btn-submit:hover { filter: brightness(1.06); box-shadow: 0 6px 18px rgba(0,123,180,.32); }
-    .btn-submit:active { transform: translateY(1px); box-shadow: 0 2px 8px rgba(0,123,180,.24); }
+    .btn-submit:hover { filter: brightness(1.08); box-shadow: 0 6px 20px rgba(0,97,143,.38); }
+    .btn-submit:active { transform: translateY(1px); box-shadow: 0 2px 9px rgba(0,97,143,.30); }
     .btn-submit i { font-size: .8125rem; }
 
     .alert-login {
         border-radius: var(--r-md);
         background: var(--danger-bg);
         border: 1px solid var(--danger-border);
-        color: #8A1D14;
+        color: var(--danger-ink);
         padding: 13px 15px;
         font-size: .8125rem; font-weight: 700;
-        margin-bottom: 20px;
+        margin-bottom: 18px;
         display: flex; align-items: flex-start; gap: 11px;
-        line-height: 1.65;
+        line-height: 1.65; text-align: right;
     }
     .alert-login i { margin-top: 3px; flex-shrink: 0; font-size: .9rem; }
 
-    .form-foot {
-        margin-top: 26px; padding-top: 20px;
+    .card-foot {
+        margin-top: 24px; padding-top: 18px;
         border-top: 1px solid var(--ink-100);
         font-size: .75rem; color: var(--ink-450);
-        text-align: center; font-weight: 500; line-height: 1.7;
+        text-align: center; font-weight: 500; line-height: 1.75;
+    }
+    .card-foot i { color: var(--ink-400); margin-left: 5px; }
+
+    /* ------- تذييل الصفحة خارج البطاقة ------- */
+    .page-foot {
+        margin-top: 26px;
+        font-size: .8125rem; font-weight: 500;
+        /* أفتح من اللازم عمداً: التوهّج الأزرق يرفع سطوع الخلفية تحت
+           التذييل، وعندها يرسب #A9C1D2 في معيار التباين. */
+        color: #C7D8E5;
+        text-align: center;
     }
 
-    :focus-visible { outline: 2px solid var(--brand-600); outline-offset: 2px; }
+    :focus-visible { outline: 2px solid var(--brand-300); outline-offset: 3px; }
 
     /* =====================================================
-       الاستجابة
+       الشاشات الصغيرة
        ===================================================== */
-    @media (max-width: 980px) {
-        body { grid-template-columns: 1fr; }
-        .brand-panel { display: none; }
-        .form-panel { padding: 28px 18px; align-items: flex-start; padding-top: 6vh; }
-        .form-card { padding: 30px 24px 26px; }
-        .form-card > .logo-lockup {
-            display: inline-flex;
-            box-shadow: none;
-            border: 1px solid var(--ink-200);
-            padding: 12px 18px;
-            margin: 0 auto 26px;
-        }
-        .form-card { text-align: center; }
-        .form-card form, .field label, .caps-hint { text-align: right; }
-        .caps-hint { justify-content: flex-start; }
+    @media (max-width: 520px) {
+        body { padding: 24px 14px; justify-content: flex-start; padding-top: 6vh; }
+        .auth-card { border-radius: 20px; }
+        .card-head { padding: 26px 22px 20px; }
+        .card-body { padding: 24px 22px 26px; }
+        .logo-slot { height: 48px; }
+        .logo-lockup { gap: 16px; }
+        .org-name { font-size: 1.05rem; }
     }
 
     @media (prefers-reduced-motion: reduce) {
+        .auth-card { animation: none; }
         *, *::before, *::after { transition-duration: .01ms !important; }
     }
     </style>
@@ -301,60 +281,29 @@
 <body>
 {% static_if_exists 'DataCenter/logo.svg' as datacenter_logo %}
 
-    <!-- ================= اللوحة التعريفية ================= -->
-    <section class="brand-panel">
-        <div>
+    <main class="auth-card">
+        <div class="card-crest"></div>
+
+        <!-- ============ الشعاران والهوية ============ -->
+        <header class="card-head">
             <div class="logo-lockup">
                 <span class="logo-slot">
                     <img src="{% static 'images/logo.svg' %}" alt="شعار تجمع عسير الصحي">
                 </span>
-                {% if datacenter_logo %}
                 <span class="logo-rule"></span>
                 <span class="logo-slot">
-                    <img src="{{ datacenter_logo }}" alt="شعار مركز البيانات">
+                    <img src="{% static 'DataCenter/logo.svg' %}" alt="شعار مركز البيانات">
                 </span>
                 {% endif %}
             </div>
 
-            <h1>تجمع عسير الصحي</h1>
-            <p class="lede">
-                منصّة موحّدة لإدارة بيانات منسوبي تجمع عسير الصحي —
-                الملفات الوظيفية، العقود، التصنيف المهني، والإجازات.
-            </p>
+            <h1 class="org-name">تجمع عسير الصحي</h1>
+            <p class="org-sub">نظام إدارة الموارد البشرية</p>
+        </header>
 
-            <ul class="feature-list">
-                <li><i class="fas fa-users"></i> ملفات وظيفية شاملة لكل منسوبي المنشأة</li>
-                <li><i class="fas fa-bell"></i> تنبيهات مبكرة لانتهاء العقود والتصنيف</li>
-                <li><i class="fas fa-chart-column"></i> مؤشرات أداء وتقارير قابلة للتصدير</li>
-                <li><i class="fas fa-shield-halved"></i> صلاحيات دقيقة وسجل مراقبة كامل</li>
-            </ul>
-        </div>
-
-        <div class="brand-footer">
-            © 2026 تجمع عسير الصحي — جميع الحقوق محفوظة
-        </div>
-    </section>
-
-    <!-- ================= نموذج الدخول ================= -->
-    <section class="form-panel">
-        <div class="form-card">
-
-            <div class="logo-lockup">
-                <span class="logo-slot">
-                    <img src="{% static 'images/logo.svg' %}" alt="شعار تجمع عسير الصحي">
-                </span>
-                {% if datacenter_logo %}
-                <span class="logo-rule"></span>
-                <span class="logo-slot">
-                    <img src="{{ datacenter_logo }}" alt="شعار مركز البيانات">
-                </span>
-                {% endif %}
-            </div>
-
-            <div class="form-head">
-                <h2>تسجيل الدخول</h2>
-                <p>أدخل بياناتك للوصول إلى لوحة التحكم</p>
-            </div>
+        <!-- ============ النموذج ============ -->
+        <div class="card-body">
+            <h2 class="form-title">تسجيل الدخول</h2>
 
             {% if messages %}
                 {% for message in messages %}
@@ -408,11 +357,16 @@
                 </button>
             </form>
 
-            <div class="form-foot">
+            <div class="card-foot">
+                <i class="fas fa-circle-info"></i>
                 للحصول على حساب أو استعادة كلمة المرور، يرجى مراجعة إدارة الموارد البشرية.
             </div>
         </div>
-    </section>
+    </main>
+
+    <div class="page-foot">
+        © 2026 تجمع عسير الصحي — جميع الحقوق محفوظة
+    </div>
 
     <script>
     (function () {
@@ -430,7 +384,6 @@
             input.focus();
         });
 
-        // Caps Lock سبب شائع لفشل الدخول دون أن يدري المستخدم
         function checkCaps(e) {
             if (typeof e.getModifierState !== 'function') return;
             caps.classList.toggle('is-on', e.getModifierState('CapsLock'));
