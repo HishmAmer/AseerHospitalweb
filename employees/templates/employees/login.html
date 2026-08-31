@@ -103,7 +103,6 @@
         background-size: 120px 120px;
     }
 
-    /* حجاب يضمن قراءة النص فوق المشهد مهما اشتدّ سطوعه */
     /* يعتم جهة النموذج فقط ليُقرأ فوقها، ويترك المشهد ظاهراً في
        بقيّة الصفحة. أثقل من هذا يبتلع الجبال والغروب معاً. */
     .veil {
@@ -136,7 +135,7 @@
         align-items: start; gap: 30px 58px;
         animation: rise .7s cubic-bezier(.16,.84,.3,1) both;
     }
-    .intro { grid-area: intro; }
+    .intro { grid-area: intro; min-width: 0; }
     .tiles { grid-area: tiles; }
     .card  { grid-area: card; align-self: center; }
     @keyframes rise {
@@ -145,8 +144,6 @@
     }
 
     /* ------- جهة التعريف ------- */
-    .intro { min-width: 0; }
-
     /* الشعاران مباشرة على المشهد بلا أي لوحة خلفهما. يُقلبان إلى
        الأبيض الخالص: شعار عسير يحمل نصاً كحلياً داخله، ولو تُرك
        بألوانه على خلفية داكنة لاختفى ذلك النص تماماً. */
@@ -459,21 +456,21 @@
             </section>
 
             <div class="tiles">
-                    <div class="tile">
-                        <div class="ic ic-teal"><i class="fas fa-user-doctor"></i></div>
-                        <h3>البيانات المهنية</h3>
-                        <p>سجلات الأطباء ومؤهلاتهم وتصنيفاتهم</p>
-                    </div>
-                    <div class="tile">
-                        <div class="ic ic-violet"><i class="fas fa-calendar-check"></i></div>
-                        <h3>الإجازات والطلبات</h3>
-                        <p>تسجيل الإجازات ومتابعتها وأرشفتها</p>
-                    </div>
-                    <div class="tile">
-                        <div class="ic ic-amber"><i class="fas fa-chart-column"></i></div>
-                        <h3>التقارير والإحصاءات</h3>
-                        <p>تقارير جاهزة للطباعة وإحصاءات المنشآت</p>
-                    </div>
+                <div class="tile">
+                    <div class="ic ic-teal"><i class="fas fa-user-doctor"></i></div>
+                    <h3>البيانات المهنية</h3>
+                    <p>سجلات الأطباء ومؤهلاتهم وتصنيفاتهم</p>
+                </div>
+                <div class="tile">
+                    <div class="ic ic-violet"><i class="fas fa-calendar-check"></i></div>
+                    <h3>الإجازات والطلبات</h3>
+                    <p>تسجيل الإجازات ومتابعتها وأرشفتها</p>
+                </div>
+                <div class="tile">
+                    <div class="ic ic-amber"><i class="fas fa-chart-column"></i></div>
+                    <h3>التقارير والإحصاءات</h3>
+                    <p>تقارير جاهزة للطباعة وإحصاءات المنشآت</p>
+                </div>
                 <div class="tile">
                     <div class="ic ic-blue"><i class="fas fa-file-excel"></i></div>
                     <h3>مطابقة ملفات إكسل</h3>
