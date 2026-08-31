@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="dark">
-    <meta name="theme-color" content="#03121C">
+    <meta name="theme-color" content="#04121D">
     <title>تسجيل الدخول | تجمع عسير الصحي</title>
 
     <link rel="icon" type="image/svg+xml" href="{% static 'images/logo.svg' %}">
@@ -19,209 +19,220 @@
     <style>
     :root {
         --brand-300: #7CCDEF;
-        --brand-400: #3FB2E4;
         --brand-600: #0088C6;
         /* طرفا زر الدخول: أي أزرق أفتح من هذا يهبط بالنص الأبيض دون 4.5:1 */
         --btn-top: #007DB6;
         --btn-btm: #00618F;
 
-        --deep-1: #093951;
-        --deep-2: #03121C;
-
         --on-dark:      #FFFFFF;
-        --on-dark-soft: #DCEAF3;   /* عناوين الحقول */
-        --on-dark-mute: #B9D3E4;   /* نص شارح */
-        /* الحقل زجاج فوق زجاج فوق أفتح جزء من التدرّج، فخلفيته المركّبة
-           تصل إلى #3D5866 لا إلى ما يوحي به CSS وحده؛ هذه الدرجة تعطي
-           5.1:1 هناك بدل 4.1:1. */
-        --on-dark-hint: #C3D8E5;   /* النص البديل داخل الحقول */
+        --on-dark-soft: #E3EEF6;   /* عناوين الحقول وعناوين البطاقات */
+        --on-dark-mute: #C2D8E6;   /* نص شارح فوق المشهد */
+        --on-dark-hint: #C9DCE9;   /* النص البديل داخل الحقول */
 
-        --glass:        rgba(255,255,255,.07);
-        --glass-line:   rgba(255,255,255,.16);
-        --field:        rgba(255,255,255,.10);
-        --field-line:   rgba(255,255,255,.20);
+        --glass:      rgba(9,34,52,.42);
+        --glass-line: rgba(255,255,255,.17);
+        --field:      rgba(255,255,255,.10);
+        --field-line: rgba(255,255,255,.22);
 
-        --danger-bg:    rgba(255,120,105,.14);
-        --danger-line:  rgba(255,150,138,.45);
-        --danger-ink:   #FFC9C2;
-
-        --warn-ink:     #FFD98A;
+        --danger-bg:   rgba(255,120,105,.16);
+        --danger-line: rgba(255,150,138,.48);
+        --danger-ink:  #FFCDC6;
+        --warn-ink:    #FFD98A;
 
         --r-md: 12px;
-        --r-xl: 24px;
+        --r-lg: 18px;
+        --r-xl: 26px;
     }
 
     * { box-sizing: border-box; }
     html { overflow-x: hidden; }
 
     body {
-        margin: 0;
-        min-height: 100vh;
+        margin: 0; min-height: 100vh;
         font-family: 'Cairo', system-ui, -apple-system, 'Segoe UI', sans-serif;
         color: var(--on-dark-mute);
-        background: var(--deep-2);
+        background: #04121D;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        display: flex; flex-direction: column;
-        align-items: center; justify-content: center;
-        padding: 40px 24px 28px;
         overflow-x: hidden;
     }
 
     /* =====================================================
-       الخلفية
+       المشهد: غروب فوق جبال عسير، مرسوم بـ CSS و SVG فقط.
+       لا ملف صورة ولا طلب خارجي — النظام يعمل على سيرفر داخلي
+       مغلق، وأي صورة من الإنترنت ستظهر مكسورة هناك.
+       لاستبداله بصورة حقيقية لاحقاً: أضف سطر background-image
+       إلى ‎.photo‎ ويبقى كل ما فوقه من طبقات كما هو.
        ===================================================== */
-    .bg {
-        position: fixed; inset: 0; z-index: 0; overflow: hidden;
+    .scene { position: fixed; inset: 0; z-index: 0; overflow: hidden; background: #04121D; }
+
+    .sky {
+        position: absolute; inset: 0;
         background:
-            radial-gradient(130% 100% at 85% 6%, rgba(0,136,198,.55) 0%, transparent 52%),
-            radial-gradient(90% 80% at 8% 96%, rgba(22,166,217,.30) 0%, transparent 55%),
-            linear-gradient(125deg, var(--deep-1) 0%, var(--deep-2) 70%);
+            /* وهج الغروب عند خط الأفق، فوق قمم الجبال مباشرة */
+            radial-gradient(86% 26% at 46% 76%, rgba(255,196,122,.85) 0%, rgba(255,142,80,.42) 36%, transparent 74%),
+            radial-gradient(78% 44% at 20% 4%, rgba(0,120,182,.42) 0%, transparent 62%),
+            linear-gradient(180deg,
+                #03101C 0%, #062740 28%, #0A4362 48%,
+                #14607D 62%, #2A7B87 70%, #17505F 80%, #071B29 92%, #03111C 100%);
     }
-    /* توهّجان يتنفّسان ببطء فلا تبدو الخلفية صورة ثابتة */
-    .glow {
-        position: absolute; border-radius: 50%;
-        filter: blur(100px); will-change: transform;
+    /* الطبقة المخصّصة لصورة حقيقية إن وُجدت لاحقاً */
+    .photo { position: absolute; inset: 0; background-size: cover; background-position: center; }
+
+    .ridge {
+        position: absolute; left: 0; width: 100%; height: auto; display: block;
     }
-    .g1 {
-        width: 640px; height: 640px; top: -220px; right: -140px;
-        background: radial-gradient(circle, rgba(0,136,198,.55), transparent 68%);
-        animation: drift-a 30s ease-in-out infinite alternate;
-    }
-    .g2 {
-        width: 520px; height: 520px; bottom: -200px; left: -120px;
-        background: radial-gradient(circle, rgba(22,166,217,.42), transparent 68%);
-        animation: drift-b 36s ease-in-out infinite alternate;
-    }
-    @keyframes drift-a {
-        from { transform: translate3d(0,0,0) scale(1); }
-        to   { transform: translate3d(-70px,60px,0) scale(1.14); }
-    }
-    @keyframes drift-b {
-        from { transform: translate3d(0,0,0) scale(1); }
-        to   { transform: translate3d(60px,-50px,0) scale(1.16); }
+    .ridge-far  { bottom: 22%; opacity: .68; }
+    .ridge-mid  { bottom: 11%; opacity: .9; }
+    .ridge-near { bottom: 0; }
+
+    /* أضواء المدينة عند سفح الجبل */
+    .lights {
+        position: absolute; left: 0; right: 0; bottom: 10%; height: 96px;
+        background-image: radial-gradient(rgba(255,196,126,.85) 1px, transparent 1.6px);
+        background-size: 34px 26px;
+        opacity: .5; filter: blur(.4px);
+        -webkit-mask-image: radial-gradient(ellipse 60% 100% at 55% 60%, #000 10%, transparent 78%);
+                mask-image: radial-gradient(ellipse 60% 100% at 55% 60%, #000 10%, transparent 78%);
     }
 
-    /* خطوط ضوء مائلة تعطي إحساس العمق */
-    .rays {
-        position: absolute; inset: 0; opacity: .20;
-        background: repeating-linear-gradient(102deg,
-            rgba(255,255,255,.10) 0 1px, transparent 1px 128px);
+    /* زخرفة هندسية عربية خفيفة */
+    .pattern {
+        position: absolute; inset: 0; opacity: .09;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='1.1'%3E%3Cpath d='M60 8 L82 30 L82 62 L60 84 L38 62 L38 30 Z'/%3E%3Cpath d='M60 20 L74 34 L74 58 L60 72 L46 58 L46 34 Z'/%3E%3Cpath d='M0 60 L18 78 L0 96'/%3E%3Cpath d='M120 60 L102 78 L120 96'/%3E%3C/g%3E%3C/svg%3E");
+        background-size: 120px 120px;
     }
 
-    /* علامة مائية: صغيرة بما يكفي لتُقرأ كشعار لا كخطوط عشوائية */
-    .wm {
-        position: absolute; left: -70px; bottom: -80px;
-        width: 360px; height: auto;
-        opacity: .06; filter: brightness(0) invert(1);
+    /* يعتم جهة النموذج فقط ليُقرأ فوقها، ويترك المشهد ظاهراً في
+       بقيّة الصفحة. أثقل من هذا يبتلع الجبال والغروب معاً. */
+    .veil {
+        position: absolute; inset: 0;
+        background: linear-gradient(260deg,
+            rgba(3,16,26,.06) 0%, rgba(3,16,26,.24) 36%,
+            rgba(3,16,26,.56) 68%, rgba(3,16,26,.76) 100%);
     }
 
     /* =====================================================
-       التخطيط: التعريف يميناً والنموذج يساراً
+       التخطيط
        ===================================================== */
-    .shell {
+    .page {
         position: relative; z-index: 1;
-        width: 100%; max-width: 1010px;
-        display: grid; grid-template-columns: 1fr auto;
-        align-items: center; gap: 62px;
+        min-height: 100vh;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 40px 26px 24px; gap: 26px;
+    }
+    /* مناطق مسمّاة لا ترتيب DOM: على الجوال يجب أن تسبق بطاقة
+       الدخول بطاقاتِ الميزات، وإلا مرّر المستخدم أربع بطاقات قبل
+       أن يصل إلى حقل اسم المستخدم. */
+    .shell {
+        width: 100%; max-width: 1120px;
+        display: grid;
+        grid-template-columns: 1fr 418px;
+        grid-template-areas:
+            "intro card"
+            "tiles card";
+        align-items: start; gap: 30px 58px;
         animation: rise .7s cubic-bezier(.16,.84,.3,1) both;
     }
+    .intro { grid-area: intro; min-width: 0; }
+    .tiles { grid-area: tiles; }
+    .card  { grid-area: card; align-self: center; }
     @keyframes rise {
         from { opacity: 0; transform: translateY(20px); }
         to   { opacity: 1; transform: none; }
     }
 
     /* ------- جهة التعريف ------- */
-    /* لوحة بيضاء تحمل الشعارين بألوانهما الأصلية: قلبهما إلى الأبيض
-       يُفقد كل شعار ملوّن هويته ويحوّله إلى كتلة بيضاء. */
-    .plate {
-        display: flex; flex-direction: column; width: fit-content; max-width: 100%;
-        align-items: stretch;
-        background: #fff; border-radius: 22px;
-        padding: 24px 34px 18px; margin-bottom: 30px;
-        box-shadow: 0 20px 46px -18px rgba(0,0,0,.72);
-    }
-    .plate-logos { display: flex; align-items: center; gap: 34px; }
-    /* الارتفاع يحكم المقاس، لكنه يتنازل مع ضيق الشاشة: بارتفاع ثابت
-       86px وشعار عريض تتمدّد اللوحة فتزيح بطاقة الدخول خارج الشاشة،
-       ويخفيها overflow-x دون أن يظهر شريط تمرير — فلا يصل المستخدم
-       إلى النموذج أصلاً. الـ clamp يبقيه 86px على الشاشات الواسعة
-       وينزل به تدريجياً قبل أن تصل اللوحة إلى هذا الحد.
-       max-width شبكة أمان أخيرة لشعار مفرط العرض. */
-    .plate img {
-        height: clamp(56px, 5.6vw, 86px);
+    /* الشعاران مباشرة على المشهد بلا أي لوحة خلفهما. يُقلبان إلى
+       الأبيض الخالص: شعار عسير يحمل نصاً كحلياً داخله، ولو تُرك
+       بألوانه على خلفية داكنة لاختفى ذلك النص تماماً. */
+    .logos { display: flex; align-items: center; gap: 30px; margin-bottom: 20px; }
+    /* الارتفاع وحده يحكم المقاس، مع clamp حتى لا يتمدّد شعار عريض
+       فيزيح بطاقة الدخول خارج الشاشة. */
+    .logos img {
+        height: clamp(58px, 5.4vw, 84px);
         width: auto; max-width: 100%; object-fit: contain; display: block;
+        filter: brightness(0) invert(1) drop-shadow(0 4px 14px rgba(0,0,0,.55));
     }
-    .plate .rule {
-        width: 1px; align-self: stretch; margin: 4px 0;
-        background: linear-gradient(180deg, transparent, #C3D1DD, transparent);
-    }
-
-    /* اسم الإدارة داخل اللوحة البيضاء لا فوق الخلفية: أعلى يمين
-       الصفحة هو أسطع بقعة في التدرّج (يقيس #5197B4)، وعليها يعطي
-       الأزرق الفاتح 1.84:1 والأبيض نفسه 3.26:1 — كلاهما راسب. داخل
-       اللوحة يصبح نصاً داكناً على أبيض، ويقرأ كترويسة رسمية.
-       المحدِّد ‎.intro .plate-dept‎ لا ‎.plate-dept‎ وحده: العنصر فقرة
-       داخل ‎.intro‎ و‎.intro p‎ أعلى أولوية منه فكان يبتلع تنسيقه. */
-    .intro .plate-dept {
-        margin: 16px 0 0; padding-top: 14px;
-        border-top: 1px solid #E1E9F0;
-        font-size: .9375rem; font-weight: 700; line-height: 1.7;
-        color: #0B2A3E; text-align: center; max-width: none;
+    .logos .rule {
+        width: 1px; align-self: stretch; margin: 6px 0;
+        background: linear-gradient(180deg, transparent, rgba(255,255,255,.55), transparent);
     }
 
-    /* بدونه لا ينكمش عمود 1fr تحت عرض محتواه فتُزاح البطاقة */
-    .intro { min-width: 0; }
+    .intro .dept {
+        margin: 0 0 22px; max-width: none;
+        font-size: .9375rem; font-weight: 700; letter-spacing: .01em;
+        color: var(--on-dark-soft);
+    }
 
     .intro h1 {
-        font-size: 3rem; font-weight: 800; margin: 0 0 16px;
-        letter-spacing: -.035em; line-height: 1.2;
-        background: linear-gradient(180deg, #fff, #9CCFE8);
-        -webkit-background-clip: text; background-clip: text; color: transparent;
+        font-size: clamp(2.1rem, 3.4vw, 3.15rem); font-weight: 800;
+        margin: 0 0 14px; letter-spacing: -.035em; line-height: 1.2;
+        color: #fff; text-shadow: 0 4px 22px rgba(0,0,0,.5);
     }
-    .intro p {
-        font-size: 1.0625rem; color: var(--on-dark-mute);
-        margin: 0; font-weight: 500; line-height: 1.9; max-width: 34ch;
+    .intro .sub {
+        margin: 0 0 6px; max-width: 42ch;
+        font-size: 1.0625rem; font-weight: 700; color: var(--on-dark-soft);
     }
-
-    /* أسماء المشرفين: أقراص فاتحة بنص داكن، أعلى تباين ممكن هنا */
-    .credits {
-        list-style: none; padding: 0; margin: 26px 0 0;
-        display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
-    }
-    .credits li {
-        background: #B3E2F6; color: #0B2A3E;
-        border-radius: 999px; padding: 9px 20px;
-        font-size: .8125rem; font-weight: 700; line-height: 1.6;
-        box-shadow: 0 6px 16px -8px rgba(0,0,0,.6);
+    .intro .sub2 {
+        margin: 0; max-width: 46ch;
+        font-size: .9375rem; font-weight: 500; line-height: 1.9;
+        color: var(--on-dark-mute);
     }
 
-    /* ------- البطاقة الزجاجية ------- */
+    /* ------- بطاقات الميزات ------- */
+    .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-width: 0; }
+    .tile {
+        background: rgba(9,34,52,.32);
+        border: 1px solid rgba(255,255,255,.15);
+        border-radius: var(--r-lg); padding: 20px 20px 18px;
+        backdrop-filter: blur(14px) saturate(140%);
+        -webkit-backdrop-filter: blur(14px) saturate(140%);
+        transition: transform .22s ease, border-color .22s ease, background-color .22s ease;
+    }
+    .tile:hover {
+        transform: translateY(-3px);
+        border-color: rgba(255,255,255,.28);
+        background: rgba(12,44,66,.46);
+    }
+    .tile .ic {
+        width: 46px; height: 46px; border-radius: 14px;
+        display: grid; place-items: center;
+        color: #fff; font-size: 1.0625rem; margin-bottom: 14px;
+        box-shadow: 0 8px 20px -8px rgba(0,0,0,.7);
+    }
+    .ic-teal   { background: linear-gradient(160deg, #12A594, #0B7A6D); }
+    .ic-violet { background: linear-gradient(160deg, #9B5DE5, #6E35B8); }
+    .ic-amber  { background: linear-gradient(160deg, #F2A227, #C97A0B); }
+    .ic-blue   { background: linear-gradient(160deg, #2196D9, #0F6EA6); }
+    .tile h3 { margin: 0 0 6px; font-size: .9375rem; font-weight: 700; color: var(--on-dark-soft); }
+    .tile p  { margin: 0; font-size: .8125rem; font-weight: 500; line-height: 1.75; color: var(--on-dark-mute); }
+
+    /* =====================================================
+       بطاقة الدخول
+       ===================================================== */
     .card {
-        width: 400px; flex: none;
-        border-radius: var(--r-xl); padding: 34px 34px 30px;
+        border-radius: var(--r-xl); padding: 36px 34px 30px;
         background: var(--glass);
         border: 1px solid var(--glass-line);
         backdrop-filter: blur(26px) saturate(150%);
         -webkit-backdrop-filter: blur(26px) saturate(150%);
-        box-shadow: 0 30px 70px -24px rgba(0,0,0,.75),
-                    inset 0 1px 0 rgba(255,255,255,.22);
+        box-shadow: 0 32px 74px -26px rgba(0,0,0,.8),
+                    inset 0 1px 0 rgba(255,255,255,.20);
     }
     /* بلا backdrop-filter تصبح البطاقة شبه شفافة والنص فوقها غير مقروء */
     @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-        .card { background: rgba(8,42,61,.92); }
+        .card { background: rgba(6,30,46,.95); }
     }
 
     .card h2 {
-        font-size: 1.125rem; font-weight: 800; color: var(--on-dark);
-        margin: 0 0 24px; text-align: center;
-        position: relative; padding-bottom: 14px;
+        margin: 0 0 6px; font-size: 1.5rem; font-weight: 800;
+        color: var(--on-dark); text-align: center; letter-spacing: -.02em;
     }
-    .card h2::after {
-        content: ''; position: absolute; bottom: 0; right: 50%;
-        transform: translateX(50%);
-        width: 44px; height: 3px; border-radius: 3px;
-        background: linear-gradient(90deg, var(--brand-300), var(--brand-600));
+    .card .lede {
+        margin: 0 0 26px; text-align: center;
+        font-size: .8125rem; font-weight: 500; color: var(--on-dark-mute);
     }
 
     .field { margin-bottom: 17px; }
@@ -233,7 +244,7 @@
     .shellf { position: relative; }
     .shellf > .lead {
         position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
-        color: #8FB4CA; font-size: .875rem; pointer-events: none; z-index: 1;
+        color: #A6C4D6; font-size: .875rem; pointer-events: none; z-index: 1;
         transition: color .2s ease;
     }
     .shellf:focus-within > .lead { color: var(--brand-300); }
@@ -250,10 +261,10 @@
                     background-color .2s ease, transform .2s ease;
     }
     .field input::placeholder { color: var(--on-dark-hint); font-weight: 500; }
-    .field input:hover { border-color: rgba(255,255,255,.30); }
+    .field input:hover { border-color: rgba(255,255,255,.34); }
     .field input:focus {
         outline: none;
-        background: rgba(255,255,255,.16);
+        background: rgba(255,255,255,.17);
         border-color: var(--brand-300);
         box-shadow: 0 0 0 4px rgba(124,205,239,.22);
         transform: translateY(-1px);
@@ -264,7 +275,7 @@
     .field input:-webkit-autofill:hover,
     .field input:-webkit-autofill:focus {
         -webkit-text-fill-color: var(--on-dark);
-        -webkit-box-shadow: 0 0 0 1000px #0C3349 inset;
+        -webkit-box-shadow: 0 0 0 1000px #0B3349 inset;
         caret-color: var(--on-dark);
     }
     #id_password { padding-left: 46px; }
@@ -274,10 +285,10 @@
         width: 32px; height: 32px;
         display: flex; align-items: center; justify-content: center;
         border: none; background: transparent; cursor: pointer;
-        color: #A9C4D4; border-radius: 9px; font-size: .8125rem; z-index: 1;
+        color: #B7D0DF; border-radius: 9px; font-size: .8125rem; z-index: 1;
         transition: color .2s ease, background-color .2s ease;
     }
-    .peek:hover { color: var(--brand-300); background: rgba(255,255,255,.12); }
+    .peek:hover { color: var(--brand-300); background: rgba(255,255,255,.13); }
 
     /* Caps Lock سبب شائع لفشل الدخول دون سبب ظاهر */
     .caps {
@@ -292,9 +303,9 @@
         background: linear-gradient(180deg, var(--btn-top), var(--btn-btm));
         color: #fff; padding: 16px;
         font-family: inherit; font-size: .9375rem; font-weight: 800;
-        cursor: pointer; margin-top: 24px;
+        cursor: pointer; margin-top: 26px;
         display: flex; align-items: center; justify-content: center; gap: 10px;
-        box-shadow: 0 10px 28px -8px rgba(0,136,198,.85);
+        box-shadow: 0 12px 30px -8px rgba(0,136,198,.9);
         transition: filter .2s ease, box-shadow .2s ease, transform .12s ease;
     }
     .btn::before {
@@ -304,7 +315,7 @@
         transition: transform .65s ease;
     }
     .btn:hover::before { transform: translateX(300%) skewX(-18deg); }
-    .btn:hover { filter: brightness(1.1); box-shadow: 0 14px 34px -8px rgba(0,136,198,1); }
+    .btn:hover { filter: brightness(1.1); box-shadow: 0 16px 38px -8px rgba(0,136,198,1); }
     .btn:active { transform: translateY(1px); }
     .btn span, .btn i { position: relative; z-index: 1; }
     .btn i { font-size: .8125rem; transition: transform .25s ease; }
@@ -330,17 +341,36 @@
     }
 
     .note {
-        margin-top: 24px; padding-top: 18px;
-        border-top: 1px solid rgba(255,255,255,.14);
+        margin: 26px 0 0; padding-top: 18px;
+        border-top: 1px solid rgba(255,255,255,.15);
         font-size: .75rem; color: var(--on-dark-mute);
         text-align: center; line-height: 1.8; font-weight: 500;
     }
-    .note i { color: #8FB4CA; margin-left: 5px; }
+    .note i { color: #A6C4D6; margin-left: 5px; }
+
+    /* =====================================================
+       شريط فريق العمل
+       ===================================================== */
+    .strip {
+        width: 100%; max-width: 1120px;
+        display: grid; grid-template-columns: repeat(3, 1fr);
+        gap: 10px; padding: 18px 22px;
+        border-radius: var(--r-lg);
+        background: rgba(9,34,52,.34);
+        border: 1px solid rgba(255,255,255,.15);
+        backdrop-filter: blur(14px) saturate(140%);
+        -webkit-backdrop-filter: blur(14px) saturate(140%);
+    }
+    .strip div {
+        display: flex; align-items: center; justify-content: center; gap: 11px;
+        font-size: .8125rem; font-weight: 700; color: var(--on-dark-soft);
+        text-align: center; line-height: 1.7;
+    }
+    .strip div + div { border-right: 1px solid rgba(255,255,255,.14); }
+    .strip i { color: var(--brand-300); font-size: .9375rem; flex-shrink: 0; }
 
     .foot {
-        position: relative; z-index: 1; margin-top: 34px;
-        font-size: .8125rem; font-weight: 500; color: #9FBDD0;
-        text-align: center;
+        font-size: .8125rem; font-weight: 500; color: #AFC8D8; text-align: center;
     }
 
     :focus-visible { outline: 2px solid var(--brand-300); outline-offset: 3px; }
@@ -348,136 +378,179 @@
     /* =====================================================
        الشاشات الأصغر
        ===================================================== */
-    @media (max-width: 980px) {
-        body { justify-content: flex-start; padding-top: 5vh; }
+    @media (max-width: 1040px) {
+        .page { justify-content: flex-start; padding-top: 5vh; }
         .shell {
-            grid-template-columns: 1fr; gap: 32px; max-width: 520px;
+            grid-template-columns: 1fr;
+            grid-template-areas: "intro" "card" "tiles";
+            gap: 30px; max-width: 560px;
         }
         .intro { text-align: center; }
-        .plate { margin-inline: auto; margin-bottom: 26px; }
-        .intro h1 { font-size: 1.85rem; }
-        .intro p { margin-inline: auto; font-size: .9375rem; }
-        .credits { align-items: center; margin-top: 22px; }
-        .card { width: 100%; }
-        .wm { display: none; }
+        .logos { justify-content: center; }
+        .intro .sub, .intro .sub2 { margin-inline: auto; }
+        .strip { max-width: 560px; grid-template-columns: 1fr; gap: 14px; }
+        .strip div { justify-content: flex-start; }
+        .strip div + div {
+            border-right: 0; border-top: 1px solid rgba(255,255,255,.14); padding-top: 14px;
+        }
     }
-    @media (max-width: 520px) {
-        body { padding: 26px 16px 22px; }
-        .plate { padding: 16px 18px 14px; border-radius: 18px; }
-        .plate-logos { gap: 20px; }
-        .plate img { height: clamp(48px, 13vw, 64px); }
-        .intro h1 { font-size: 1.55rem; }
-        .card { padding: 26px 20px 24px; border-radius: 20px; }
+    @media (max-width: 560px) {
+        .page { padding: 26px 16px 20px; }
+        .logos { gap: 20px; }
+        .logos img { height: clamp(48px, 13vw, 62px); }
+        .tiles { grid-template-columns: 1fr; }
+        .card { padding: 28px 20px 24px; border-radius: 22px; }
+        .card h2 { font-size: 1.3rem; }
     }
 
     /* احترام تفضيل تقليل الحركة: كل شيء ثابت والتصميم كما هو */
     @media (prefers-reduced-motion: reduce) {
-        .glow, .shell, .alert { animation: none !important; }
+        .shell, .alert { animation: none !important; }
         *, *::before, *::after { transition-duration: .01ms !important; }
     }
     </style>
 </head>
 <body>
 
-    <div class="bg" aria-hidden="true">
-        <span class="glow g1"></span>
-        <span class="glow g2"></span>
-        <span class="rays"></span>
-        <img class="wm" src="{% static 'images/logo.svg' %}" alt="">
+    <!-- ============ المشهد ============ -->
+    <div class="scene" aria-hidden="true">
+        <div class="sky"></div>
+        <div class="photo"></div>
+
+        <svg class="ridge ridge-far" viewBox="0 0 1440 260" preserveAspectRatio="none">
+            <path fill="#0C4058" d="M0,260 L0,150 L120,96 L250,140 L380,70 L520,132 L660,58 L800,124 L940,66 L1080,130 L1220,84 L1340,138 L1440,104 L1440,260 Z"/>
+        </svg>
+        <svg class="ridge ridge-mid" viewBox="0 0 1440 240" preserveAspectRatio="none">
+            <path fill="#062C42" d="M0,240 L0,170 L150,110 L300,168 L450,88 L600,158 L760,96 L900,164 L1050,102 L1200,166 L1330,118 L1440,160 L1440,240 Z"/>
+        </svg>
+        <svg class="ridge ridge-near" viewBox="0 0 1440 220" preserveAspectRatio="none">
+            <path fill="#031420" d="M0,220 L0,182 L130,136 L280,190 L430,124 L580,182 L730,130 L880,186 L1030,138 L1180,190 L1320,146 L1440,184 L1440,220 Z"/>
+        </svg>
+
+        <span class="lights"></span>
+        <span class="pattern"></span>
+        <span class="veil"></span>
     </div>
 
-    <div class="shell">
+    <div class="page">
+        <div class="shell">
 
-        <!-- ============ التعريف بالجهة ============ -->
-        <section class="intro">
-            <div class="plate">
-                <div class="plate-logos">
+            <!-- ============ التعريف بالجهة ============ -->
+            <section class="intro">
+                <div class="logos">
                     <img src="{% static 'images/logo.svg' %}" alt="شعار تجمع عسير الصحي">
                     <span class="rule"></span>
                     {% comment %}
-                    لو لم يُركَّب الشعار الثاني بعد، يُزال هو والفاصل معاً فتبقى
-                    اللوحة نظيفة بدل أيقونة صورة مكسورة.
+                    لو لم يُركَّب الشعار الثاني بعد، يُزال هو والفاصل معاً فيبقى
+                    الرأس نظيفاً بدل أيقونة صورة مكسورة.
                     {% endcomment %}
                     <img src="{% static 'images/DataCenter.svg' %}" alt=""
                          onerror="this.previousElementSibling.remove(); this.remove();">
                 </div>
-                <p class="plate-dept">إدارة المستشفيات والمراكز المتخصصة</p>
+
+                <p class="dept">إدارة المستشفيات والمراكز المتخصصة</p>
+
+                <h1>تجمع عسير الصحي</h1>
+                <p class="sub">نظام إدارة بيانات الكادر الطبي (الأطباء)</p>
+                <p class="sub2">بيانات الموظفين والإجازات والتقارير في منصة واحدة</p>
+            </section>
+
+            <div class="tiles">
+                <div class="tile">
+                    <div class="ic ic-teal"><i class="fas fa-user-doctor"></i></div>
+                    <h3>البيانات المهنية</h3>
+                    <p>سجلات الأطباء ومؤهلاتهم وتصنيفاتهم</p>
+                </div>
+                <div class="tile">
+                    <div class="ic ic-violet"><i class="fas fa-calendar-check"></i></div>
+                    <h3>الإجازات والطلبات</h3>
+                    <p>تسجيل الإجازات ومتابعتها وأرشفتها</p>
+                </div>
+                <div class="tile">
+                    <div class="ic ic-amber"><i class="fas fa-chart-column"></i></div>
+                    <h3>التقارير والإحصاءات</h3>
+                    <p>تقارير جاهزة للطباعة وإحصاءات المنشآت</p>
+                </div>
+                <div class="tile">
+                    <div class="ic ic-blue"><i class="fas fa-file-excel"></i></div>
+                    <h3>مطابقة ملفات إكسل</h3>
+                    <p>مقارنة ملف خارجي بالنظام وتقرير بالناقص</p>
+                </div>
             </div>
 
-            <h1>تجمع عسير الصحي</h1>
-            <p>نظام إدارة بيانات الكادر الطبي (أطباء) — سجلات الموظفين والإجازات والتقارير في منصّة واحدة.</p>
+            <!-- ============ النموذج ============ -->
+            <main class="card">
+                <h2>مرحبًا بك</h2>
+                <p class="lede">يرجى تسجيل الدخول للوصول إلى النظام</p>
 
-            <ul class="credits">
-                <li>إشـــراف : د. محمد الأحمري</li>
-                <li>إعداد وتنسيق : مـريـم الـقـرني</li>
-                <li>متابعة فريق مركز البيانات</li>
-            </ul>
-        </section>
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert" role="alert">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                {% endif %}
 
-        <!-- ============ النموذج ============ -->
-        <main class="card">
-            <h2>تسجيل الدخول</h2>
-
-            {% if messages %}
-                {% for message in messages %}
+                {% if form.errors %}
                 <div class="alert" role="alert">
-                    <i class="fas fa-triangle-exclamation"></i>
-                    <span>{{ message }}</span>
+                    <i class="fas fa-circle-exclamation"></i>
+                    <span>اسم المستخدم أو كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى.</span>
                 </div>
-                {% endfor %}
-            {% endif %}
+                {% endif %}
 
-            {% if form.errors %}
-            <div class="alert" role="alert">
-                <i class="fas fa-circle-exclamation"></i>
-                <span>اسم المستخدم أو كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى.</span>
-            </div>
-            {% endif %}
+                <form method="POST" action="{% url 'login' %}">
+                    {% csrf_token %}
 
-            <form method="POST" action="{% url 'login' %}">
-                {% csrf_token %}
-
-                <div class="field">
-                    <label for="id_username">اسم المستخدم</label>
-                    <div class="shellf">
-                        <i class="fas fa-user lead"></i>
-                        <input type="text" name="username" id="id_username"
-                               placeholder="أدخل اسم المستخدم"
-                               required autofocus autocomplete="username">
+                    <div class="field">
+                        <label for="id_username">اسم المستخدم</label>
+                        <div class="shellf">
+                            <i class="fas fa-user lead"></i>
+                            <input type="text" name="username" id="id_username"
+                                   placeholder="أدخل اسم المستخدم"
+                                   required autofocus autocomplete="username">
+                        </div>
                     </div>
-                </div>
 
-                <div class="field">
-                    <label for="id_password">كلمة المرور</label>
-                    <div class="shellf">
-                        <i class="fas fa-lock lead"></i>
-                        <input type="password" name="password" id="id_password"
-                               placeholder="••••••••"
-                               required autocomplete="current-password">
-                        <button type="button" class="peek" id="peekBtn"
-                                aria-label="إظهار كلمة المرور" title="إظهار كلمة المرور">
-                            <i class="fas fa-eye"></i>
-                        </button>
+                    <div class="field">
+                        <label for="id_password">كلمة المرور</label>
+                        <div class="shellf">
+                            <i class="fas fa-lock lead"></i>
+                            <input type="password" name="password" id="id_password"
+                                   placeholder="••••••••"
+                                   required autocomplete="current-password">
+                            <button type="button" class="peek" id="peekBtn"
+                                    aria-label="إظهار كلمة المرور" title="إظهار كلمة المرور">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="caps" id="capsHint">
+                            <i class="fas fa-arrow-up"></i> مفتاح Caps Lock مُفعّل
+                        </div>
                     </div>
-                    <div class="caps" id="capsHint">
-                        <i class="fas fa-arrow-up"></i> مفتاح Caps Lock مُفعّل
-                    </div>
-                </div>
 
-                <button type="submit" class="btn">
-                    <span>تسجيل الدخول</span>
-                    <i class="fas fa-arrow-left"></i>
-                </button>
-            </form>
+                    <button type="submit" class="btn">
+                        <span>تسجيل الدخول</span>
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                </form>
 
-            <p class="note">
-                <i class="fas fa-circle-info"></i>
-                للحصول على حساب أو استعادة كلمة المرور، يرجى مراجعة الإدارة.
-            </p>
-        </main>
+                <p class="note">
+                    <i class="fas fa-circle-info"></i>
+                    للحصول على حساب أو استعادة كلمة المرور، يرجى مراجعة الإدارة.
+                </p>
+            </main>
+        </div>
+
+        <!-- ============ فريق العمل ============ -->
+        <div class="strip">
+            <div><i class="fas fa-user-tie"></i><span>إشـــراف : د. محمد الأحمري</span></div>
+            <div><i class="fas fa-pen-ruler"></i><span>إعداد وتنسيق : مـريـم الـقـرني</span></div>
+            <div><i class="fas fa-people-group"></i><span>متابعة فريق مركز البيانات</span></div>
+        </div>
+
+        <div class="foot">جميع الحقوق محفوظة © 2026 تجمع عسير الصحي</div>
     </div>
-
-    <div class="foot">© 2026 تجمع عسير الصحي — جميع الحقوق محفوظة</div>
 
     <script>
     (function () {
