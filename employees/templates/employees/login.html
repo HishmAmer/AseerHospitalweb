@@ -135,12 +135,13 @@
     /* لوحة بيضاء تحمل الشعارين بألوانهما الأصلية: قلبهما إلى الأبيض
        يُفقد كل شعار ملوّن هويته ويحوّله إلى كتلة بيضاء. */
     .plate {
-        display: flex; width: fit-content; max-width: 100%;
-        align-items: center; gap: 34px;
+        display: flex; flex-direction: column; width: fit-content; max-width: 100%;
+        align-items: stretch;
         background: #fff; border-radius: 22px;
-        padding: 24px 34px; margin-bottom: 34px;
+        padding: 24px 34px 18px; margin-bottom: 30px;
         box-shadow: 0 20px 46px -18px rgba(0,0,0,.72);
     }
+    .plate-logos { display: flex; align-items: center; gap: 34px; }
     /* الارتفاع يحكم المقاس، لكنه يتنازل مع ضيق الشاشة: بارتفاع ثابت
        86px وشعار عريض تتمدّد اللوحة فتزيح بطاقة الدخول خارج الشاشة،
        ويخفيها overflow-x دون أن يظهر شريط تمرير — فلا يصل المستخدم
@@ -156,13 +157,17 @@
         background: linear-gradient(180deg, transparent, #C3D1DD, transparent);
     }
 
-    .tag {
-        display: inline-block; margin-bottom: 20px;
-        font-size: .75rem; font-weight: 800; letter-spacing: .1em;
-        color: var(--brand-300);
-        border: 1px solid rgba(124,205,239,.42);
-        background: rgba(124,205,239,.09);
-        border-radius: 999px; padding: 6px 16px;
+    /* اسم الإدارة داخل اللوحة البيضاء لا فوق الخلفية: أعلى يمين
+       الصفحة هو أسطع بقعة في التدرّج (يقيس #5197B4)، وعليها يعطي
+       الأزرق الفاتح 1.84:1 والأبيض نفسه 3.26:1 — كلاهما راسب. داخل
+       اللوحة يصبح نصاً داكناً على أبيض، ويقرأ كترويسة رسمية.
+       المحدِّد ‎.intro .plate-dept‎ لا ‎.plate-dept‎ وحده: العنصر فقرة
+       داخل ‎.intro‎ و‎.intro p‎ أعلى أولوية منه فكان يبتلع تنسيقه. */
+    .intro .plate-dept {
+        margin: 16px 0 0; padding-top: 14px;
+        border-top: 1px solid #E1E9F0;
+        font-size: .9375rem; font-weight: 700; line-height: 1.7;
+        color: #0B2A3E; text-align: center; max-width: none;
     }
 
     /* بدونه لا ينكمش عمود 1fr تحت عرض محتواه فتُزاح البطاقة */
@@ -177,6 +182,18 @@
     .intro p {
         font-size: 1.0625rem; color: var(--on-dark-mute);
         margin: 0; font-weight: 500; line-height: 1.9; max-width: 34ch;
+    }
+
+    /* أسماء المشرفين: أقراص فاتحة بنص داكن، أعلى تباين ممكن هنا */
+    .credits {
+        list-style: none; padding: 0; margin: 26px 0 0;
+        display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+    }
+    .credits li {
+        background: #B3E2F6; color: #0B2A3E;
+        border-radius: 999px; padding: 9px 20px;
+        font-size: .8125rem; font-weight: 700; line-height: 1.6;
+        box-shadow: 0 6px 16px -8px rgba(0,0,0,.6);
     }
 
     /* ------- البطاقة الزجاجية ------- */
@@ -340,12 +357,14 @@
         .plate { margin-inline: auto; margin-bottom: 26px; }
         .intro h1 { font-size: 1.85rem; }
         .intro p { margin-inline: auto; font-size: .9375rem; }
+        .credits { align-items: center; margin-top: 22px; }
         .card { width: 100%; }
         .wm { display: none; }
     }
     @media (max-width: 520px) {
         body { padding: 26px 16px 22px; }
-        .plate { padding: 16px 18px; gap: 20px; border-radius: 18px; }
+        .plate { padding: 16px 18px 14px; border-radius: 18px; }
+        .plate-logos { gap: 20px; }
         .plate img { height: clamp(48px, 13vw, 64px); }
         .intro h1 { font-size: 1.55rem; }
         .card { padding: 26px 20px 24px; border-radius: 20px; }
@@ -372,19 +391,27 @@
         <!-- ============ التعريف بالجهة ============ -->
         <section class="intro">
             <div class="plate">
-                <img src="{% static 'images/logo.svg' %}" alt="شعار تجمع عسير الصحي">
-                <span class="rule"></span>
-                {% comment %}
-                لو لم يُركَّب الشعار الثاني بعد، يُزال هو والفاصل معاً فتبقى
-                اللوحة نظيفة بدل أيقونة صورة مكسورة.
-                {% endcomment %}
-                <img src="{% static 'images/DataCenter.svg' %}" alt=""
-                     onerror="this.previousElementSibling.remove(); this.remove();">
+                <div class="plate-logos">
+                    <img src="{% static 'images/logo.svg' %}" alt="شعار تجمع عسير الصحي">
+                    <span class="rule"></span>
+                    {% comment %}
+                    لو لم يُركَّب الشعار الثاني بعد، يُزال هو والفاصل معاً فتبقى
+                    اللوحة نظيفة بدل أيقونة صورة مكسورة.
+                    {% endcomment %}
+                    <img src="{% static 'images/DataCenter.svg' %}" alt=""
+                         onerror="this.previousElementSibling.remove(); this.remove();">
+                </div>
+                <p class="plate-dept">إدارة المستشفيات والمراكز المتخصصة</p>
             </div>
 
-            <span class="tag">بوابة الدخول</span>
             <h1>تجمع عسير الصحي</h1>
             <p>نظام إدارة الموارد البشرية — سجلات الموظفين والإجازات والتقارير في منصّة واحدة.</p>
+
+            <ul class="credits">
+                <li>إشـــراف : د. محمد الأحمري</li>
+                <li>إعداد وتنسيق : مـريـم الـقـرني</li>
+                <li>متابعة فريق مركز البيانات</li>
+            </ul>
         </section>
 
         <!-- ============ النموذج ============ -->
