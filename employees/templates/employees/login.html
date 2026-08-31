@@ -1,11 +1,11 @@
-{% load static safe_static %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light">
-    <meta name="theme-color" content="#0B2A3E">
+    <meta name="theme-color" content="#061A28">
     <title>تسجيل الدخول | تجمع عسير الصحي</title>
 
     <link rel="icon" type="image/svg+xml" href="{% static 'images/logo.svg' %}">
@@ -21,18 +21,20 @@
         --brand-100: #D9F0FB;
         --brand-200: #B3E2F6;
         --brand-300: #7CCDEF;
+        --brand-400: #3FB2E4;
         --brand-600: #0088C6;
         --brand-btn-top: #007DB6;   /* طرفا التدرّج يحققان تباين AA */
         --brand-btn-btm: #00618F;   /* مع النص الأبيض */
 
-        --navy-1: #0F3F5C;
+        --navy-1: #10496B;
         --navy-2: #0B2A3E;
-        --navy-3: #061A28;
+        --navy-3: #04121C;
 
         --ink-900: #0B1F2E;
         --ink-800: #12293C;
         --ink-700: #1E3A52;
         --ink-450: #5F7689;   /* أفتح لون يصلح نصاً على أبيض (4.73:1) */
+        --ink-500: #5A7183;   /* للنص فوق أرضية الحقل الرمادية (4.73:1) */
         --ink-400: #94A8BA;   /* حدود وأيقونات فقط */
         --ink-300: #C3D1DD;
         --ink-200: #E1E9F0;
@@ -43,114 +45,255 @@
         --danger-border: #F5B5B0;
         --danger-ink: #8A1D14;
 
-        --r-md: 11px;
-        --r-lg: 16px;
-        --r-xl: 24px;
+        --r-md: 12px;
+        --r-xl: 26px;
     }
 
     * { box-sizing: border-box; }
 
-    /* =====================================================
-       خلفية مؤسسية تملأ الشاشة
-       ===================================================== */
+    /* overflow-x على body وحده يُمرَّر إلى نافذة العرض ولا يقصّ شيئاً،
+       فلا بدّ من وضعه على html أيضاً. */
+    html { overflow-x: hidden; }
+
     body {
         font-family: 'Cairo', system-ui, -apple-system, 'Segoe UI', sans-serif;
         margin: 0;
         min-height: 100vh;
         color: var(--ink-700);
+        background: var(--navy-3);
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-
-        background:
-            radial-gradient(ellipse 900px 520px at 78% 8%,  rgba(0,136,198,.34), transparent 62%),
-            radial-gradient(ellipse 760px 480px at 12% 92%, rgba(63,178,228,.18), transparent 62%),
-            linear-gradient(158deg, var(--navy-1) 0%, var(--navy-2) 46%, var(--navy-3) 100%);
-        background-attachment: fixed;
-
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
         padding: 40px 20px;
+        overflow-x: hidden;
     }
 
-    /* شبكة نقطية خفيفة تكسر صمت الخلفية دون ضجيج */
-    body::before {
+    /* =====================================================
+       الخلفية: هالات لونية تتحرّك ببطء + نسيج حبيبي
+       ===================================================== */
+    .stage {
+        position: fixed; inset: 0; z-index: 0;
+        overflow: hidden;
+        background: linear-gradient(160deg, var(--navy-1) 0%, var(--navy-2) 45%, var(--navy-3) 100%);
+    }
+
+    .blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(90px);
+        opacity: .55;
+        will-change: transform;
+    }
+    .blob-1 {
+        width: 620px; height: 620px;
+        background: radial-gradient(circle, #0088C6 0%, transparent 68%);
+        top: -180px; right: -120px;
+        animation: drift1 26s ease-in-out infinite alternate;
+    }
+    .blob-2 {
+        width: 520px; height: 520px;
+        background: radial-gradient(circle, #16A6D9 0%, transparent 68%);
+        bottom: -160px; left: -110px;
+        animation: drift2 32s ease-in-out infinite alternate;
+    }
+    .blob-3 {
+        width: 420px; height: 420px;
+        background: radial-gradient(circle, #0E6FA8 0%, transparent 70%);
+        top: 42%; left: 46%;
+        opacity: .38;
+        animation: drift3 38s ease-in-out infinite alternate;
+    }
+    @keyframes drift1 {
+        from { transform: translate3d(0,0,0)      scale(1); }
+        to   { transform: translate3d(-90px,70px,0) scale(1.14); }
+    }
+    @keyframes drift2 {
+        from { transform: translate3d(0,0,0)      scale(1); }
+        to   { transform: translate3d(80px,-60px,0) scale(1.18); }
+    }
+    @keyframes drift3 {
+        from { transform: translate3d(-50%,-50%,0) scale(1); }
+        to   { transform: translate3d(-38%,-62%,0) scale(1.22); }
+    }
+
+    /* شبكة نقطية تتلاشى نحو الأطراف */
+    .stage::before {
         content: '';
-        position: fixed; inset: 0;
-        background-image: radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px);
-        background-size: 22px 22px;
+        position: absolute; inset: 0;
+        background-image: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px);
+        background-size: 24px 24px;
+        -webkit-mask-image: radial-gradient(ellipse 78% 68% at 50% 46%, #000 35%, transparent 100%);
+                mask-image: radial-gradient(ellipse 78% 68% at 50% 46%, #000 35%, transparent 100%);
+    }
+
+    /* حبيبات دقيقة تكسر نعومة التدرّج */
+    .stage::after {
+        content: '';
+        position: absolute; inset: 0;
+        opacity: .30; mix-blend-mode: overlay;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+    }
+
+    /* شعاع ضوئي هابط من أعلى المسرح */
+    .beam {
+        position: absolute; top: -22%; right: 50%;
+        width: 660px; height: 132%;
+        transform: translateX(50%) rotate(7deg);
+        background: linear-gradient(180deg, rgba(124,205,239,.20) 0%, rgba(124,205,239,.06) 34%, transparent 64%);
+        filter: blur(34px);
         pointer-events: none;
     }
 
     /* =====================================================
        البطاقة
        ===================================================== */
+    /* الغلاف يحمل الهالة الدوّارة: البطاقة نفسها overflow:hidden
+       فلا يمكن للتوهّج أن يخرج من حدودها. */
+    .card-wrap {
+        position: relative; z-index: 1;
+        width: 100%; max-width: 438px;
+    }
+    /* تدوير زاوية التدرّج نفسها بدل تدوير العنصر: لو دار العنصر
+       البيضاوي لتغيّر شكل التوهّج مع كل دورة. */
+    @property --halo-angle {
+        syntax: '<angle>'; initial-value: 0deg; inherits: false;
+    }
+    .card-wrap::before {
+        content: '';
+        position: absolute; inset: -74px; z-index: -1;
+        border-radius: 50%;
+        background: conic-gradient(from var(--halo-angle),
+            transparent 0deg,
+            rgba(63,178,228,.62) 48deg,
+            transparent 122deg,
+            rgba(0,136,198,.55) 208deg,
+            transparent 292deg,
+            rgba(124,205,239,.38) 340deg,
+            transparent 360deg);
+        filter: blur(54px);
+        opacity: .85;
+        animation: halo 20s linear infinite;
+    }
+    @keyframes halo { to { --halo-angle: 360deg; } }
+
     .auth-card {
         position: relative;
-        width: 100%; max-width: 430px;
-        background: #fff;
+        width: 100%;
         border-radius: var(--r-xl);
         overflow: hidden;
+        /* إطار متدرّج رفيع: طبقة بيضاء داخلية فوق طبقة ملوّنة عند الحافة */
+        border: 1px solid transparent;
+        background:
+            linear-gradient(#fff, #fff) padding-box,
+            linear-gradient(150deg, rgba(124,205,239,.95), rgba(255,255,255,.35) 42%, rgba(0,136,198,.75)) border-box;
         box-shadow:
-            0 2px 4px rgba(3,14,22,.10),
-            0 24px 60px rgba(3,14,22,.34);
-        animation: rise .45s cubic-bezier(.2,.7,.3,1);
+            0 0 0 1px rgba(4,18,28,.28),
+            0 30px 70px -18px rgba(2,12,20,.72),
+            0 0 90px -30px rgba(0,136,198,.55);
+        animation: cardIn .7s cubic-bezier(.16,.84,.3,1) both;
     }
-    @keyframes rise {
-        from { opacity: 0; transform: translateY(14px); }
-        to   { opacity: 1; transform: translateY(0); }
+    @keyframes cardIn {
+        from { opacity: 0; transform: translateY(22px) scale(.975); }
+        to   { opacity: 1; transform: none; }
     }
 
-    /* شريط لوني رفيع يعلو البطاقة */
+    /* شريط علوي بلمعة تمر ببطء */
     .card-crest {
-        height: 5px;
-        background: linear-gradient(90deg, var(--brand-600), var(--brand-300), var(--brand-600));
+        height: 4px; position: relative; overflow: hidden;
+        background: linear-gradient(90deg, var(--brand-600), var(--brand-300) 50%, var(--brand-600));
     }
+    .card-crest::after {
+        content: '';
+        position: absolute; inset: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,.9), transparent);
+        transform: translateX(-100%);
+        animation: sweep 4.5s ease-in-out 1.2s infinite;
+    }
+    @keyframes sweep { 0% { transform: translateX(-100%);} 55%,100% { transform: translateX(100%);} }
 
-    /* ------- رأس البطاقة: الشعاران ------- */
+    /* ------- الرأس ------- */
     .card-head {
-        padding: 30px 34px 24px;
+        padding: 34px 34px 26px;
         text-align: center;
-        background: linear-gradient(180deg, var(--ink-50) 0%, #fff 100%);
+        background: linear-gradient(180deg, #F2F8FC 0%, #fff 100%);
         border-bottom: 1px solid var(--ink-100);
+        position: relative;
+    }
+    /* توهّج خفيف خلف الشعارين */
+    .card-head::before {
+        content: '';
+        position: absolute; top: -30px; right: 50%;
+        transform: translateX(50%);
+        width: 260px; height: 130px;
+        background: radial-gradient(ellipse, rgba(0,136,198,.16), transparent 70%);
+        pointer-events: none;
     }
 
     .logo-lockup {
-        display: inline-flex;
-        align-items: center;
-        gap: 20px;
-        margin-bottom: 18px;
+        position: relative;
+        display: inline-flex; align-items: center; gap: 24px;
+        margin-bottom: 20px;
+    }
+    /* نبضة ضوئية بطيئة خلف الشعارين */
+    .logo-lockup::before {
+        content: '';
+        position: absolute; inset: -26px -34px;
+        border-radius: 999px;
+        background: radial-gradient(ellipse, rgba(0,136,198,.14), transparent 68%);
+        animation: pulse 6s ease-in-out infinite;
+        pointer-events: none;
+    }
+    @keyframes pulse {
+        0%,100% { opacity: .55; transform: scale(.97); }
+        50%     { opacity: 1;   transform: scale(1.04); }
     }
     /* الارتفاع يحكم المقاس: شعار عسير يحمل نصاً داخله فيحتاج مساحة
        ليبقى مقروءاً، والثاني يتمدّد بنفس الارتفاع دون تشويه. */
-    .logo-slot { display: flex; align-items: center; justify-content: center; height: 56px; }
-    .logo-slot img { height: 100%; width: auto; max-width: 118px; object-fit: contain; display: block; }
-    .logo-rule { width: 1px; align-self: stretch; margin: 6px 0; background: var(--ink-200); }
+    .logo-slot { position: relative; display: flex; align-items: center; justify-content: center; height: 66px; }
+    .logo-slot img { height: 100%; width: auto; max-width: 134px; object-fit: contain; display: block; }
+    .logo-rule {
+        width: 1px; align-self: stretch; margin: 8px 0;
+        background: linear-gradient(180deg, transparent, var(--ink-300), transparent);
+    }
 
     .org-name {
-        font-size: 1.15rem; font-weight: 800; color: var(--ink-900);
-        margin: 0 0 5px; letter-spacing: -.02em;
+        font-size: 1.2rem; font-weight: 800; color: var(--ink-900);
+        margin: 0 0 6px; letter-spacing: -.02em;
     }
     .org-sub {
-        font-size: .8125rem; font-weight: 600; color: var(--ink-450);
+        display: inline-block;
+        /* الأزرق ٦٠٠ على الخلفية الفاتحة يعطي 3.34:1 فقط، وهذا نص 12px
+           فيلزمه 4.5:1 — الدرجة الأغمق تعطي 5.73:1 بنفس الهوية اللونية. */
+        font-size: .75rem; font-weight: 700; color: var(--brand-btn-btm);
+        background: var(--brand-100);
+        border: 1px solid var(--brand-200);
+        border-radius: 999px;
+        padding: 4px 14px;
         margin: 0; letter-spacing: .01em;
     }
 
-    /* ------- جسم البطاقة ------- */
+    /* ------- الجسم ------- */
     .card-body { padding: 28px 34px 30px; }
 
     .form-title {
         font-size: 1.0625rem; font-weight: 800; color: var(--ink-900);
-        margin: 0 0 22px; text-align: center;
-        position: relative; padding-bottom: 14px;
+        margin: 0 0 24px; text-align: center;
+        position: relative; padding-bottom: 15px;
     }
     .form-title::after {
         content: ''; position: absolute;
         bottom: 0; right: 50%; transform: translateX(50%);
-        width: 42px; height: 3px; border-radius: 3px;
-        background: var(--brand-600);
+        width: 46px; height: 3px; border-radius: 3px;
+        background: linear-gradient(90deg, var(--brand-300), var(--brand-600));
     }
+
+    /* دخول متدرّج لعناصر النموذج */
+    .stagger > * { animation: fadeUp .5s ease both; }
+    .stagger > *:nth-child(1) { animation-delay: .18s; }
+    .stagger > *:nth-child(2) { animation-delay: .26s; }
+    .stagger > *:nth-child(3) { animation-delay: .34s; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
 
     .field { margin-bottom: 16px; }
     .field label {
@@ -163,7 +306,8 @@
     .input-shell > .lead-icon {
         position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
         color: var(--ink-400); font-size: .875rem; pointer-events: none;
-        transition: color .18s ease;
+        transition: color .2s ease;
+        z-index: 1;
     }
     .input-shell:focus-within > .lead-icon { color: var(--brand-600); }
 
@@ -172,19 +316,22 @@
         border-radius: var(--r-md);
         border: 1.5px solid var(--ink-200);
         background: var(--ink-50);
-        padding: 13px 44px 13px 15px;
+        padding: 14px 44px 14px 15px;
         font-family: inherit;
         font-size: .9375rem; font-weight: 600;
         color: var(--ink-900);
-        transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+        transition: border-color .2s ease, box-shadow .2s ease,
+                    background-color .2s ease, transform .2s ease;
     }
-    .field input::placeholder { color: var(--ink-450); font-weight: 500; }
+    /* أرضية الحقل ‎#F6F9FB‎ لا الأبيض، فـ ink-450 يهبط إلى 4.47:1 عليها. */
+    .field input::placeholder { color: var(--ink-500); font-weight: 500; }
     .field input:hover { border-color: var(--ink-300); }
     .field input:focus {
         outline: none;
         background: #fff;
         border-color: var(--brand-600);
-        box-shadow: 0 0 0 4px var(--brand-100);
+        box-shadow: 0 0 0 4px var(--brand-100), 0 6px 16px -8px rgba(0,136,198,.55);
+        transform: translateY(-1px);
     }
     #id_password { padding-left: 46px; }
 
@@ -194,10 +341,11 @@
         display: flex; align-items: center; justify-content: center;
         border: none; background: transparent;
         color: var(--ink-400); cursor: pointer;
-        border-radius: 8px; font-size: .8125rem;
-        transition: color .18s ease, background-color .18s ease;
+        border-radius: 9px; font-size: .8125rem;
+        transition: color .2s ease, background-color .2s ease;
+        z-index: 1;
     }
-    .peek:hover { color: var(--ink-700); background: var(--ink-100); }
+    .peek:hover { color: var(--brand-600); background: var(--brand-100); }
 
     /* Caps Lock سبب شائع لفشل الدخول دون سبب ظاهر */
     .caps-hint {
@@ -208,23 +356,35 @@
     .caps-hint.is-on { display: flex; }
 
     .btn-submit {
+        position: relative; overflow: hidden;
         width: 100%;
         border: none;
         border-radius: var(--r-md);
         background: linear-gradient(180deg, var(--brand-btn-top) 0%, var(--brand-btn-btm) 100%);
         color: #fff;
-        padding: 14px;
+        padding: 15px;
         font-family: inherit;
         font-size: .9375rem; font-weight: 800;
         cursor: pointer;
         display: flex; align-items: center; justify-content: center; gap: 10px;
         margin-top: 24px;
-        box-shadow: 0 4px 14px rgba(0,97,143,.30);
-        transition: filter .18s ease, box-shadow .18s ease, transform .12s ease;
+        box-shadow: 0 6px 18px -6px rgba(0,97,143,.75);
+        transition: filter .2s ease, box-shadow .2s ease, transform .12s ease;
     }
-    .btn-submit:hover { filter: brightness(1.08); box-shadow: 0 6px 20px rgba(0,97,143,.38); }
-    .btn-submit:active { transform: translateY(1px); box-shadow: 0 2px 9px rgba(0,97,143,.30); }
-    .btn-submit i { font-size: .8125rem; }
+    /* لمعة تعبر الزر عند المرور */
+    .btn-submit::before {
+        content: '';
+        position: absolute; top: 0; bottom: 0; width: 42%;
+        background: linear-gradient(100deg, transparent, rgba(255,255,255,.30), transparent);
+        transform: translateX(-160%) skewX(-18deg);
+        transition: transform .65s ease;
+    }
+    .btn-submit:hover::before { transform: translateX(300%) skewX(-18deg); }
+    .btn-submit:hover { filter: brightness(1.09); box-shadow: 0 10px 26px -8px rgba(0,97,143,.9); }
+    .btn-submit:active { transform: translateY(1px); }
+    .btn-submit span, .btn-submit i { position: relative; z-index: 1; }
+    .btn-submit i { font-size: .8125rem; transition: transform .25s ease; }
+    .btn-submit:hover i { transform: translateX(-4px); }
 
     .alert-login {
         border-radius: var(--r-md);
@@ -236,8 +396,15 @@
         margin-bottom: 18px;
         display: flex; align-items: flex-start; gap: 11px;
         line-height: 1.65; text-align: right;
+        animation: shake .42s ease;
     }
     .alert-login i { margin-top: 3px; flex-shrink: 0; font-size: .9rem; }
+    @keyframes shake {
+        0%,100% { transform: translateX(0); }
+        22% { transform: translateX(-6px); }
+        44% { transform: translateX(5px); }
+        66% { transform: translateX(-3px); }
+    }
 
     .card-foot {
         margin-top: 24px; padding-top: 18px;
@@ -247,14 +414,14 @@
     }
     .card-foot i { color: var(--ink-400); margin-left: 5px; }
 
-    /* ------- تذييل الصفحة خارج البطاقة ------- */
     .page-foot {
+        position: relative; z-index: 1;
         margin-top: 26px;
         font-size: .8125rem; font-weight: 500;
-        /* أفتح من اللازم عمداً: التوهّج الأزرق يرفع سطوع الخلفية تحت
-           التذييل، وعندها يرسب #A9C1D2 في معيار التباين. */
+        /* أفتح من اللازم عمداً: الهالات ترفع سطوع الخلفية تحت التذييل */
         color: #C7D8E5;
         text-align: center;
+        animation: fadeUp .6s ease .45s both;
     }
 
     :focus-visible { outline: 2px solid var(--brand-300); outline-offset: 3px; }
@@ -263,24 +430,37 @@
        الشاشات الصغيرة
        ===================================================== */
     @media (max-width: 520px) {
-        body { padding: 24px 14px; justify-content: flex-start; padding-top: 6vh; }
-        .auth-card { border-radius: 20px; }
-        .card-head { padding: 26px 22px 20px; }
-        .card-body { padding: 24px 22px 26px; }
-        .logo-slot { height: 48px; }
+        body { padding: 26px 14px; justify-content: flex-start; padding-top: 5vh; }
+        .auth-card { border-radius: 22px; }
+        .card-head { padding: 26px 20px 20px; }
+        .card-body { padding: 24px 20px 26px; }
+        .logo-slot { height: 56px; }
+        .card-wrap::before { inset: -50px -6px; filter: blur(42px); }
+        .beam { width: 420px; }
         .logo-lockup { gap: 16px; }
-        .org-name { font-size: 1.05rem; }
+        .org-name { font-size: 1.08rem; }
+        .blob { filter: blur(70px); }
     }
 
+    /* احترام تفضيل تقليل الحركة: كل شيء ثابت، والتصميم يبقى كما هو */
     @media (prefers-reduced-motion: reduce) {
-        .auth-card { animation: none; }
+        .blob, .card-crest::after, .card-wrap::before, .logo-lockup::before { animation: none !important; }
+        .auth-card, .stagger > *, .page-foot, .alert-login { animation: none !important; }
         *, *::before, *::after { transition-duration: .01ms !important; }
     }
     </style>
 </head>
 <body>
-{% static_if_exists 'DataCenter/logo.svg' as datacenter_logo %}
 
+    <!-- ============ الخلفية المتحركة ============ -->
+    <div class="stage" aria-hidden="true">
+        <span class="blob blob-1"></span>
+        <span class="blob blob-2"></span>
+        <span class="blob blob-3"></span>
+        <span class="beam"></span>
+    </div>
+
+    <div class="card-wrap">
     <main class="auth-card">
         <div class="card-crest"></div>
 
@@ -290,12 +470,15 @@
                 <span class="logo-slot">
                     <img src="{% static 'images/logo.svg' %}" alt="شعار تجمع عسير الصحي">
                 </span>
-                {% if datacenter_logo %}
                 <span class="logo-rule"></span>
                 <span class="logo-slot">
-                    <img src="{{ datacenter_logo }}" alt="">
+                    {% comment %}
+                    لو لم يُركَّب الشعار الثاني بعد، يُزال هو والفاصل معاً
+                    فيبقى الرأس نظيفاً بدل أيقونة صورة مكسورة.
+                    {% endcomment %}
+                    <img src="{% static 'images/DataCenter.svg' %}" alt=""
+                         onerror="this.parentNode.previousElementSibling.remove(); this.parentNode.remove();">
                 </span>
-                {% endif %}
             </div>
 
             <h1 class="org-name">تجمع عسير الصحي</h1>
@@ -322,7 +505,7 @@
             </div>
             {% endif %}
 
-            <form method="POST" action="{% url 'login' %}">
+            <form method="POST" action="{% url 'login' %}" class="stagger">
                 {% csrf_token %}
 
                 <div class="field">
@@ -353,7 +536,7 @@
                 </div>
 
                 <button type="submit" class="btn-submit">
-                    تسجيل الدخول
+                    <span>تسجيل الدخول</span>
                     <i class="fas fa-arrow-left"></i>
                 </button>
             </form>
@@ -364,6 +547,7 @@
             </div>
         </div>
     </main>
+    </div>
 
     <div class="page-foot">
         © 2026 تجمع عسير الصحي — جميع الحقوق محفوظة
