@@ -1,19 +1,21 @@
 from datetime import date, datetime, timedelta
+from functools import wraps
 
 import openpyxl
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import logout
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, redirect_to_login
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q, ProtectedError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -37,7 +39,25 @@ SETTING_ITEM_MODELS = {
     'department': Department,
 }
 
-superuser_required = user_passes_test(lambda u: u.is_superuser, login_url='login')
+def superuser_required(view):
+    """يقصر العرض على مدير النظام.
+
+    ليس user_passes_test(login_url='login'): صفحة الدخول تعيد المستخدم
+    المسجَّل دخوله فوراً إلى next، فإرسال مستخدم فرع مسجَّل إليها كان
+    ينتج حلقة تحويل لا تنتهي بدل رفض واضح — على كل صفحات مدير النظام
+    لا هذه وحدها. هنا يعود إلى لوحة القيادة برسالة يفهمها.
+    """
+
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path(), reverse('login'))
+        if not request.user.is_superuser:
+            messages.error(request, 'هذه الصفحة متاحة لمدير النظام فقط.')
+            return redirect('dashboard')
+        return view(request, *args, **kwargs)
+
+    return wrapper
 
 
 def log_activity(user, action_type, description):
@@ -254,16 +274,38 @@ def edit_employee(request, pk):
     return render(request, 'employees/edit_employee.html', {'form': form, 'employee': emp})
 
 
+# أطول سبب يُقبل. الحقل نصّي بلا حدّ في قاعدة البيانات، والحدّ هنا
+# يمنع إغراق السجل بنصّ ضخم من طلب مُلفَّق.
+ARCHIVE_REASON_MAX = 500
+
+
 @require_POST
 @login_required(login_url='login')
 def delete_employee(request, pk):
     employee = get_object_or_404(
         scoped_employees(request.user, Employee.objects.filter(is_deleted=False)), pk=pk
     )
+
+    # السبب إلزامي. النافذة في المتصفح تفرضه، لكن الطلب قد يصل بدونها،
+    # فالرفض هنا هو ما يضمن ألّا يدخل الأرشيف سجلٌّ بلا سبب.
+    reason = ' '.join((request.POST.get('archive_reason') or '').split())
+    if not reason:
+        messages.error(request, 'يجب كتابة سبب النقل للأرشيف.')
+        return redirect('employee_list')
+    if len(reason) > ARCHIVE_REASON_MAX:
+        messages.error(
+            request, f'سبب النقل طويل جداً (الحد {ARCHIVE_REASON_MAX} حرفاً).'
+        )
+        return redirect('employee_list')
+
     employee.is_deleted = True
-    employee.save(update_fields=['is_deleted', 'updated_at'])
-    log_activity(request.user, 'تعديل', f'تم نقل الموظف للأرشيف: {employee.full_name}')
-    messages.success(request, f'تم حذف الموظف {employee.full_name} ونقله للأرشيف.')
+    employee.archive_reason = reason
+    employee.save(update_fields=['is_deleted', 'archive_reason', 'updated_at'])
+    log_activity(
+        request.user, 'تعديل',
+        f'تم نقل الموظف للأرشيف: {employee.full_name} — السبب: {reason}',
+    )
+    messages.success(request, f'تم نقل الموظف {employee.full_name} للأرشيف.')
     return redirect('employee_list')
 
 
@@ -327,6 +369,7 @@ MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 
 @login_required(login_url='login')
+@superuser_required
 def reconcile_employees(request):
     """يقارن ملف Excel مرفوعاً بسجلات الموظفين ضمن نطاق صلاحية المستخدم.
 
@@ -389,6 +432,7 @@ def reconcile_employees(request):
 
 
 @login_required(login_url='login')
+@superuser_required
 def reconcile_template(request):
     """قالب Excel فارغ بترويسات المطابقة، ليملأه المستخدم ويرفعه."""
     from .excel_compare import COMPARED_FIELDS
@@ -487,9 +531,17 @@ def restore_employee(request, pk):
     emp = get_object_or_404(
         scoped_employees(request.user, Employee.objects.filter(is_deleted=True)), pk=pk
     )
+    # السبب يُفرَّغ حتى لا يُنسب سبب أرشفة قديم إلى أرشفة لاحقة؛
+    # نصّه محفوظ في سجل النشاطات قبل المسح.
+    previous_reason = emp.archive_reason
     emp.is_deleted = False
-    emp.save(update_fields=['is_deleted', 'updated_at'])
-    log_activity(request.user, 'استعادة', f'تم استعادة الموظف للعمل: {emp.full_name}')
+    emp.archive_reason = None
+    emp.save(update_fields=['is_deleted', 'archive_reason', 'updated_at'])
+    log_activity(
+        request.user, 'استعادة',
+        f'تم استعادة الموظف للعمل: {emp.full_name}'
+        + (f' — سبب أرشفته كان: {previous_reason}' if previous_reason else ''),
+    )
     messages.success(request, f'تم استعادة الموظف {emp.full_name} وإعادته للسجل بنجاح!')
     return redirect('archived_employee_list')
 

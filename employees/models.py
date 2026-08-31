@@ -232,6 +232,11 @@ class Employee(models.Model):
     admin_work_details = models.TextField(null=True, blank=True, verbose_name='تفاصيل العمل الإداري')
 
     is_deleted = models.BooleanField(default=False)
+    # سبب نقل الموظف إلى الأرشيف. يُفرَّغ عند الاستعادة حتى لا يُنسب سبب
+    # قديم إلى أرشفة لاحقة؛ التاريخ الكامل محفوظ في سجل النشاطات.
+    archive_reason = models.TextField(
+        null=True, blank=True, verbose_name='سبب النقل للأرشيف'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

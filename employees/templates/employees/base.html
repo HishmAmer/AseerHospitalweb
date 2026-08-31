@@ -676,9 +676,12 @@
             <a href="{% url 'leave_list' %}" class="menu-item {% if 'leaves' in request.path %}active{% endif %}">
                 <i class="fas fa-umbrella-beach"></i> الإجازات
             </a>
+            {% if request.user.is_superuser %}
+            {# المطابقة لمدير النظام وحده؛ الرابط يختفي والعرض نفسه محميّ بالخادم. #}
             <a href="{% url 'reconcile_employees' %}" class="menu-item {% if 'reconcile' in request.path %}active{% endif %}">
                 <i class="fas fa-file-import"></i> مطابقة ملف Excel
             </a>
+            {% endif %}
             <a href="{% url 'archived_employee_list' %}" class="menu-item {% if 'archive' in request.path %}active{% endif %}">
                 <i class="fas fa-box-archive"></i> أرشيف الموظفين
             </a>

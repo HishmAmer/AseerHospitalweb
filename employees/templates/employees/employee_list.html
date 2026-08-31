@@ -121,14 +121,12 @@
                                title="تعديل البيانات" aria-label="تعديل بيانات {{ employee.full_name }}">
                                 <i class="fas fa-pen"></i>
                             </a>
-                            <form method="POST" action="{% url 'delete_employee' employee.pk %}"
-                                  onsubmit="return confirm('هل أنت متأكد من نقل الموظف للأرشيف؟');">
-                                {% csrf_token %}
-                                <button type="submit" class="action-circle action-circle-danger"
-                                        title="نقل للأرشيف" aria-label="نقل {{ employee.full_name }} للأرشيف">
-                                    <i class="fas fa-box-archive"></i>
-                                </button>
-                            </form>
+                            <button type="button" class="action-circle action-circle-danger js-archive"
+                                    data-action="{% url 'delete_employee' employee.pk %}"
+                                    data-name="{{ employee.full_name }}"
+                                    title="نقل للأرشيف" aria-label="نقل {{ employee.full_name }} للأرشيف">
+                                <i class="fas fa-box-archive"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -154,4 +152,71 @@
     </div>
 
 </div>
+
+<!-- ============ نافذة سبب النقل للأرشيف ============ -->
+<div class="modal fade" id="archiveModal" data-bs-backdrop="static" tabindex="-1"
+     aria-labelledby="archiveModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: var(--r-lg); border: 1px solid var(--border); box-shadow: var(--shadow-lg);">
+
+            <form id="archiveForm" method="POST" action="">
+                {% csrf_token %}
+
+                <div class="modal-header" style="border-bottom: 1px solid var(--border); padding: 16px 20px;">
+                    <h5 class="modal-title" id="archiveModalTitle" style="font-size:1rem; font-weight:800;">
+                        نقل الموظف للأرشيف
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+
+                <div class="modal-body" style="padding: 20px;">
+                    <p style="font-size:.875rem; color:var(--text-muted); margin:0 0 16px;">
+                        سيُنقل <strong id="archiveEmployeeName" style="color:var(--text-strong);"></strong>
+                        إلى الأرشيف ويختفي من قائمة الموظفين. يمكن استعادته لاحقاً من صفحة الأرشيف.
+                    </p>
+                    <label class="form-label" for="archiveReasonInput">سبب النقل <span style="color:var(--danger);">*</span></label>
+                    <textarea id="archiveReasonInput" name="archive_reason" class="form-control"
+                              rows="3" required maxlength="500"
+                              placeholder="مثال: انتهاء العقد، نقل إلى منشأة أخرى، استقالة…"></textarea>
+                    <div style="font-size:.75rem; color:var(--text-faint); margin-top:6px; font-weight:600;">
+                        يُحفظ السبب مع سجل الموظف ويظهر في صفحة الأرشيف وسجل النشاطات.
+                    </div>
+                </div>
+
+                <div class="modal-footer" style="border-top: 1px solid var(--border); background: var(--surface-sunken); padding: 14px 20px; gap: 8px;">
+                    <button type="button" class="btn-app btn-outline-app" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn-app btn-danger-app">
+                        <i class="fas fa-box-archive"></i> نقل للأرشيف
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var modalEl = document.getElementById('archiveModal');
+    var form    = document.getElementById('archiveForm');
+    var nameEl  = document.getElementById('archiveEmployeeName');
+    var reason  = document.getElementById('archiveReasonInput');
+    if (!modalEl || !form) return;
+
+    var modal = new bootstrap.Modal(modalEl);
+
+    document.querySelectorAll('.js-archive').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            // كل صف يعيد استخدام النافذة نفسها، فيُضبط المقصد والاسم عند الفتح.
+            form.action = btn.dataset.action;
+            nameEl.textContent = btn.dataset.name;
+            reason.value = '';
+            modal.show();
+        });
+    });
+
+    modalEl.addEventListener('shown.bs.modal', function () { reason.focus(); });
+});
+</script>
 {% endblock %}

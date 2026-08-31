@@ -7,7 +7,7 @@ from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from .forms import EmployeeForm
-from .models import Employee, Leave, UserProfile, Workplace
+from .models import ActivityLog, Employee, Leave, UserProfile, Workplace
 
 
 class SecurityTestCase(TestCase):
@@ -39,10 +39,12 @@ class AuthenticationRequiredTests(SecurityTestCase):
         self.assertIn('/login/', response['Location'])
 
     def test_system_settings_rejects_non_superuser(self):
+        # الوجهة لوحة القيادة لا صفحة الدخول: إعادة مستخدم مسجَّل إلى
+        # الدخول تُنتج حلقة تحويل، لأن تلك الصفحة تعيده إلى next فوراً.
         self.client.force_login(self.branch_user)
         response = self.client.get(reverse('system_settings'))
         self.assertEqual(response.status_code, 302)
-        self.assertIn('/login/', response['Location'])
+        self.assertEqual(response['Location'], reverse('dashboard'))
 
     def test_system_settings_allows_superuser(self):
         self.client.force_login(self.admin)
@@ -194,7 +196,7 @@ class AccountManagementTests(SecurityTestCase):
         self.client.force_login(self.branch_user)
         response = self.client.get(reverse('user_list'))
         self.assertEqual(response.status_code, 302)
-        self.assertIn('/login/', response['Location'])
+        self.assertEqual(response['Location'], reverse('dashboard'))
 
 
 class LoginThrottleTests(SecurityTestCase):
@@ -292,7 +294,8 @@ class ExcelReconcileTests(SecurityTestCase):
 
         self.url = reverse('reconcile_employees')
 
-    def post_file(self, buffer, user='branch_a', password='Str0ngPass!2024'):
+    # المطابقة صارت لمدير النظام وحده، فهو المستخدم الافتراضي هنا.
+    def post_file(self, buffer, user='admin', password='Str0ngAdminPass!'):
         self.client.login(username=user, password=password)
         return self.client.post(self.url, {'excel_file': buffer})
 
@@ -309,11 +312,14 @@ class ExcelReconcileTests(SecurityTestCase):
         self.assertEqual(report['missing_in_system'][0]['national_id'], '3030303030')
 
     def test_employee_absent_from_file_is_reported(self):
+        """موظف في النظام ولا صفَّ له في الملف يظهر في «الناقص من الملف»."""
         buffer = build_workbook([['موظف أ', '1010101010', 'EMP-1', 'نشط']])
         report = self.post_file(buffer).context['report']
 
         self.assertEqual(report['matched_count'], 1)
-        self.assertEqual(list(report['missing_in_file']), [])
+        self.assertEqual(
+            [e.full_name for e in report['missing_in_file']], ['موظف ب']
+        )
 
     def test_differing_value_is_reported(self):
         buffer = build_workbook([['موظف أ', '1010101010', 'EMP-1', 'مستقيل']])
@@ -325,15 +331,35 @@ class ExcelReconcileTests(SecurityTestCase):
         self.assertEqual(changed[0]['system'], 'نشط')
         self.assertEqual(changed[0]['file'], 'مستقيل')
 
-    def test_branch_user_never_sees_another_workplace(self):
-        """صف يخصّ منشأة أخرى يُعدّ غير مسجّل، ولا يُكشف سجلها."""
+    def test_branch_user_is_denied(self):
+        """المطابقة لمدير النظام وحده: مستخدم الفرع يُصرف عن الصفحة."""
+        self.client.login(username='branch_a', password='Str0ngPass!2024')
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('dashboard'))
+
+    def test_branch_user_cannot_post_a_file_either(self):
+        """المنع على الطلب نفسه لا على الرابط في القائمة فقط."""
+        buffer = build_workbook([['موظف أ', '1010101010', 'EMP-1', 'نشط']])
+        self.client.login(username='branch_a', password='Str0ngPass!2024')
+        response = self.client.post(self.url, {'excel_file': buffer})
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_branch_user_is_denied_the_template(self):
+        self.client.login(username='branch_a', password='Str0ngPass!2024')
+        response = self.client.get(reverse('reconcile_template'))
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_admin_sees_every_workplace(self):
+        """مدير النظام غير محصور بمنشأة، فالتقرير يشمل الجميع."""
         buffer = build_workbook([['موظف ب', '2020202020', 'EMP-2', 'نشط']])
         report = self.post_file(buffer).context['report']
 
-        self.assertEqual(report['total_system'], 1)
-        self.assertEqual(len(report['missing_in_system']), 1)
-        names = [e.full_name for e in report['missing_in_file']]
-        self.assertNotIn('موظف ب', names)
+        self.assertEqual(report['total_system'], 2)
+        self.assertEqual(report['matched_count'], 1)
 
     def test_arabic_digits_and_numeric_cells_match(self):
         """رقم الهوية كرقم أو بأرقام عربية يطابق النص المخزَّن."""
@@ -388,7 +414,7 @@ class ExcelReconcileTests(SecurityTestCase):
         self.assertEqual(before, list(Employee.objects.values_list('full_name', 'status', 'national_id')))
 
     def test_template_download_is_an_xlsx(self):
-        self.client.login(username='branch_a', password='Str0ngPass!2024')
+        self.client.login(username='admin', password='Str0ngAdminPass!')
         response = self.client.get(reverse('reconcile_template'))
 
         self.assertEqual(response.status_code, 200)
@@ -680,3 +706,115 @@ class ContractDatesByEmployeeTypeTests(SecurityTestCase):
         employee.refresh_from_db()
         self.assertIsNone(employee.contract_start_date)
         self.assertIsNone(employee.contract_end_date)
+
+class ArchiveReasonTests(SecurityTestCase):
+    """نقل الموظف للأرشيف يسجّل سببه، والاستعادة تُفرّغه."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username='branch_a', password='Str0ngPass!2024')
+        self.url = reverse('delete_employee', args=[self.own_employee.pk])
+
+    def test_reason_is_stored_with_the_employee(self):
+        response = self.client.post(self.url, {'archive_reason': 'انتهاء العقد'})
+
+        self.assertEqual(response.status_code, 302)
+        self.own_employee.refresh_from_db()
+        self.assertTrue(self.own_employee.is_deleted)
+        self.assertEqual(self.own_employee.archive_reason, 'انتهاء العقد')
+
+    def test_reason_reaches_the_activity_log(self):
+        self.client.post(self.url, {'archive_reason': 'نقل إلى منشأة أخرى'})
+
+        self.assertTrue(
+            ActivityLog.objects.filter(description__contains='نقل إلى منشأة أخرى').exists()
+        )
+
+    def test_missing_reason_does_not_archive(self):
+        """النافذة تفرض السبب، لكن الطلب قد يصل بدونها."""
+        response = self.client.post(self.url, {})
+
+        self.assertEqual(response.status_code, 302)
+        self.own_employee.refresh_from_db()
+        self.assertFalse(self.own_employee.is_deleted)
+
+    def test_whitespace_only_reason_does_not_archive(self):
+        response = self.client.post(self.url, {'archive_reason': '   \n  '})
+
+        self.assertEqual(response.status_code, 302)
+        self.own_employee.refresh_from_db()
+        self.assertFalse(self.own_employee.is_deleted)
+
+    def test_overlong_reason_is_rejected(self):
+        response = self.client.post(self.url, {'archive_reason': 'ا' * 501})
+
+        self.assertEqual(response.status_code, 302)
+        self.own_employee.refresh_from_db()
+        self.assertFalse(self.own_employee.is_deleted)
+
+    def test_reason_whitespace_is_collapsed(self):
+        self.client.post(self.url, {'archive_reason': '  انتهاء    العقد  '})
+
+        self.own_employee.refresh_from_db()
+        self.assertEqual(self.own_employee.archive_reason, 'انتهاء العقد')
+
+    def test_restore_clears_the_reason(self):
+        """وإلا نُسب سبب أرشفة قديم إلى أرشفة لاحقة."""
+        self.client.post(self.url, {'archive_reason': 'استقالة'})
+        self.client.post(reverse('restore_employee', args=[self.own_employee.pk]))
+
+        self.own_employee.refresh_from_db()
+        self.assertFalse(self.own_employee.is_deleted)
+        self.assertIsNone(self.own_employee.archive_reason)
+
+    def test_restore_keeps_the_reason_in_the_activity_log(self):
+        self.client.post(self.url, {'archive_reason': 'استقالة'})
+        self.client.post(reverse('restore_employee', args=[self.own_employee.pk]))
+
+        self.assertTrue(
+            ActivityLog.objects.filter(
+                action_type='استعادة', description__contains='استقالة'
+            ).exists()
+        )
+
+    def test_reason_shows_in_the_archive_page(self):
+        self.client.post(self.url, {'archive_reason': 'انتهاء الابتعاث'})
+        response = self.client.get(reverse('archived_employee_list'))
+
+        self.assertContains(response, 'انتهاء الابتعاث')
+
+    def test_branch_user_cannot_archive_another_workplace(self):
+        """الصلاحية القائمة لا تتأثر بإضافة السبب."""
+        response = self.client.post(
+            reverse('delete_employee', args=[self.other_employee.pk]),
+            {'archive_reason': 'أي سبب'},
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.other_employee.refresh_from_db()
+        self.assertFalse(self.other_employee.is_deleted)
+
+
+class SuperuserRedirectTests(SecurityTestCase):
+    """رفض صفحات مدير النظام لا يجوز أن ينتج حلقة تحويل.
+
+    صفحة الدخول تعيد المستخدم المسجَّل دخوله فوراً إلى next، فتوجيهه
+    إليها عند الرفض كان يرتدّ بلا نهاية بدل أن يخبره بشيء.
+    """
+
+    ADMIN_ONLY = ['reconcile_employees', 'reconcile_template', 'user_list', 'system_settings']
+
+    def test_branch_user_lands_on_the_dashboard_not_a_loop(self):
+        self.client.login(username='branch_a', password='Str0ngPass!2024')
+        for name in self.ADMIN_ONLY:
+            with self.subTest(view=name):
+                response = self.client.get(reverse(name), follow=True)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.redirect_chain[-1][0], reverse('dashboard'))
+
+    def test_anonymous_user_still_goes_to_login(self):
+        for name in self.ADMIN_ONLY:
+            with self.subTest(view=name):
+                response = self.client.get(reverse(name))
+                self.assertEqual(response.status_code, 302)
+                self.assertTrue(response['Location'].startswith(reverse('login')))

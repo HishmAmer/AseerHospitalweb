@@ -41,6 +41,7 @@
                     <th>الموظف</th>
                     <th>الرقم الوظيفي</th>
                     <th>المنشأة والقسم</th>
+                    <th>سبب النقل</th>
                     <th class="text-start">الإجراءات</th>
                 </tr>
             </thead>
@@ -70,6 +71,17 @@
                         </div>
                     </td>
 
+                    <td style="max-width:260px;">
+                        {% if emp.archive_reason %}
+                            <div class="cell-secondary" style="white-space:normal; line-height:1.7;">
+                                {{ emp.archive_reason }}
+                            </div>
+                        {% else %}
+                            {# سجلات أُرشِفت قبل إضافة الحقل #}
+                            <span class="cell-secondary">—</span>
+                        {% endif %}
+                    </td>
+
                     <td class="text-start">
                         <div class="d-flex gap-2">
                             <form method="POST" action="{% url 'restore_employee' emp.pk %}"
@@ -96,7 +108,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4">
+                    <td colspan="5">
                         <div class="empty-state">
                             <div class="tint tint-neutral"><i class="fas fa-box-open"></i></div>
                             <h6>الأرشيف فارغ</h6>
