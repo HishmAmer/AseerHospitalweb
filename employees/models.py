@@ -238,6 +238,12 @@ class Employee(models.Model):
         null=True, blank=True, verbose_name='سبب النقل للأرشيف'
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    # سبب نقل الموظف إلى الأرشيف. يُفرَّغ عند الاستعادة حتى لا يُنسب سبب
+    # قديم إلى أرشفة لاحقة؛ التاريخ الكامل محفوظ في سجل النشاطات.
+    archive_reason = models.TextField(
+        null=True, blank=True, verbose_name='سبب النقل للأرشيف'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     @property

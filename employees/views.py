@@ -31,6 +31,12 @@ from .models import (
     UserProfile,
     Workplace,
 )
+from datetime import date, datetime, timedelta
+from functools import wraps
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView, redirect_to_login
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 SETTING_ITEM_MODELS = {
     'workplace': Workplace,
@@ -38,7 +44,6 @@ SETTING_ITEM_MODELS = {
     'sub_specialty': SubSpecialty,
     'department': Department,
 }
-
 
 def superuser_required(view):
     """يقصر العرض على مدير النظام.
@@ -48,6 +53,17 @@ def superuser_required(view):
     ينتج حلقة تحويل لا تنتهي بدل رفض واضح — على كل صفحات مدير النظام
     لا هذه وحدها. هنا يعود إلى لوحة القيادة برسالة يفهمها.
     """
+
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path(), reverse('login'))
+        if not request.user.is_superuser:
+            messages.error(request, 'هذه الصفحة متاحة لمدير النظام فقط.')
+            return redirect('dashboard')
+        return view(request, *args, **kwargs)
+
+    return wrapper
 
     @wraps(view)
     def wrapper(request, *args, **kwargs):
@@ -309,7 +325,6 @@ def delete_employee(request, pk):
     messages.success(request, f'تم نقل الموظف {employee.full_name} للأرشيف.')
     return redirect('employee_list')
 
-
 def excel_safe(value):
     """Neutralise spreadsheet formula injection in exported cells."""
     if isinstance(value, str) and value[:1] in ('=', '+', '-', '@', '\t', '\r'):
@@ -535,6 +550,9 @@ def restore_employee(request, pk):
     # السبب يُفرَّغ حتى لا يُنسب سبب أرشفة قديم إلى أرشفة لاحقة؛
     # نصّه محفوظ في سجل النشاطات قبل المسح.
     previous_reason = emp.archive_reason
+        # السبب يُفرَّغ حتى لا يُنسب سبب أرشفة قديم إلى أرشفة لاحقة؛
+    # نصّه محفوظ في سجل النشاطات قبل المسح.
+    previous_reason = emp.archive_reason
     emp.is_deleted = False
     emp.archive_reason = None
     emp.save(update_fields=['is_deleted', 'archive_reason', 'updated_at'])
@@ -543,6 +561,7 @@ def restore_employee(request, pk):
         f'تم استعادة الموظف للعمل: {emp.full_name}'
         + (f' — سبب أرشفته كان: {previous_reason}' if previous_reason else ''),
     )
+   
     messages.success(request, f'تم استعادة الموظف {emp.full_name} وإعادته للسجل بنجاح!')
     return redirect('archived_employee_list')
 
