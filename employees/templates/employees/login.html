@@ -34,7 +34,8 @@
         --ink-800: #12293C;
         --ink-700: #1E3A52;
         --ink-500: #6B8299;
-        --ink-400: #94A8BA;
+        --ink-400: #94A8BA;   /* حدود وأيقونات فقط — يرسب كنص */
+        --ink-450: #5F7689;   /* أفتح لون يصلح نصاً ثانوياً (4.73:1) */
         --ink-300: #C3D1DD;
         --ink-200: #E1E9F0;
         --ink-100: #EFF3F7;
@@ -171,7 +172,7 @@
         margin: 0 0 7px; letter-spacing: -.02em;
     }
     .form-head p {
-        font-size: .9375rem; color: var(--ink-500); font-weight: 500; margin: 0;
+        font-size: .9375rem; color: var(--ink-450); font-weight: 500; margin: 0;
     }
 
     .field { margin-bottom: 17px; }
@@ -200,7 +201,7 @@
         color: var(--ink-900);
         transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
     }
-    .field input::placeholder { color: var(--ink-400); font-weight: 500; }
+    .field input::placeholder { color: var(--ink-450); font-weight: 500; }
     .field input:hover { border-color: var(--ink-300); }
     .field input:focus {
         outline: none;
@@ -234,7 +235,8 @@
         width: 100%;
         border: none;
         border-radius: var(--r-md);
-        background: linear-gradient(180deg, var(--brand-600) 0%, var(--brand-700) 100%);
+        /* طرفا التدرّج يحققان تباين AA مع النص الأبيض — brand-600 لا يحققه */
+        background: linear-gradient(180deg, #007DB6 0%, #00618F 100%);
         color: #fff;
         padding: 14px;
         font-family: inherit;
@@ -265,7 +267,7 @@
     .form-foot {
         margin-top: 26px; padding-top: 20px;
         border-top: 1px solid var(--ink-100);
-        font-size: .75rem; color: var(--ink-400);
+        font-size: .75rem; color: var(--ink-450);
         text-align: center; font-weight: 500; line-height: 1.7;
     }
 
@@ -289,7 +291,6 @@
         .form-card { text-align: center; }
         .form-card form, .field label, .caps-hint { text-align: right; }
         .caps-hint { justify-content: flex-start; }
-        .logo-lockup { display: flex; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -344,8 +345,8 @@
                 </span>
                 {% if datacenter_logo %}
                 <span class="logo-rule"></span>
-                 <span class="logo-slot">
-                    <img src="{% static 'DataCenter/logo.svg' %}" alt="شعار مركز البيانات">
+                <span class="logo-slot">
+                    <img src="{{ datacenter_logo }}" alt="شعار مركز البيانات">
                 </span>
                 {% endif %}
             </div>
