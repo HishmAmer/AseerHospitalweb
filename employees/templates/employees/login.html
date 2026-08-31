@@ -135,15 +135,22 @@
     /* لوحة بيضاء تحمل الشعارين بألوانهما الأصلية: قلبهما إلى الأبيض
        يُفقد كل شعار ملوّن هويته ويحوّله إلى كتلة بيضاء. */
     .plate {
-        display: flex; width: fit-content;
-        align-items: center; gap: 24px;
-        background: #fff; border-radius: 18px;
-        padding: 16px 24px; margin-bottom: 32px;
-        box-shadow: 0 16px 38px -16px rgba(0,0,0,.7);
+        display: flex; width: fit-content; max-width: 100%;
+        align-items: center; gap: 34px;
+        background: #fff; border-radius: 22px;
+        padding: 24px 34px; margin-bottom: 34px;
+        box-shadow: 0 20px 46px -18px rgba(0,0,0,.72);
     }
-    /* الارتفاع وحده يحكم المقاس. أي max-width هنا يقصّ الشعار العريض
-       فيهبط ارتفاعه ويبدو أصغر من جاره. */
-    .plate img { height: 60px; width: auto; display: block; }
+    /* الارتفاع يحكم المقاس، لكنه يتنازل مع ضيق الشاشة: بارتفاع ثابت
+       86px وشعار عريض تتمدّد اللوحة فتزيح بطاقة الدخول خارج الشاشة،
+       ويخفيها overflow-x دون أن يظهر شريط تمرير — فلا يصل المستخدم
+       إلى النموذج أصلاً. الـ clamp يبقيه 86px على الشاشات الواسعة
+       وينزل به تدريجياً قبل أن تصل اللوحة إلى هذا الحد.
+       max-width شبكة أمان أخيرة لشعار مفرط العرض. */
+    .plate img {
+        height: clamp(56px, 5.6vw, 86px);
+        width: auto; max-width: 100%; object-fit: contain; display: block;
+    }
     .plate .rule {
         width: 1px; align-self: stretch; margin: 4px 0;
         background: linear-gradient(180deg, transparent, #C3D1DD, transparent);
@@ -157,6 +164,9 @@
         background: rgba(124,205,239,.09);
         border-radius: 999px; padding: 6px 16px;
     }
+
+    /* بدونه لا ينكمش عمود 1fr تحت عرض محتواه فتُزاح البطاقة */
+    .intro { min-width: 0; }
 
     .intro h1 {
         font-size: 3rem; font-weight: 800; margin: 0 0 16px;
@@ -324,10 +334,10 @@
     @media (max-width: 980px) {
         body { justify-content: flex-start; padding-top: 5vh; }
         .shell {
-            grid-template-columns: 1fr; gap: 32px; max-width: 430px;
+            grid-template-columns: 1fr; gap: 32px; max-width: 520px;
         }
         .intro { text-align: center; }
-        .plate { margin-inline: auto; margin-bottom: 24px; }
+        .plate { margin-inline: auto; margin-bottom: 26px; }
         .intro h1 { font-size: 1.85rem; }
         .intro p { margin-inline: auto; font-size: .9375rem; }
         .card { width: 100%; }
@@ -335,8 +345,8 @@
     }
     @media (max-width: 520px) {
         body { padding: 26px 16px 22px; }
-        .plate { padding: 13px 18px; gap: 18px; border-radius: 16px; }
-        .plate img { height: 50px; }
+        .plate { padding: 16px 18px; gap: 20px; border-radius: 18px; }
+        .plate img { height: clamp(48px, 13vw, 64px); }
         .intro h1 { font-size: 1.55rem; }
         .card { padding: 26px 20px 24px; border-radius: 20px; }
     }
@@ -374,7 +384,7 @@
 
             <span class="tag">بوابة الدخول</span>
             <h1>تجمع عسير الصحي</h1>
-            <p>إدارة بيانات الموظفين — سجلات الموظفين والإجازات والتقارير في منصّة واحدة.</p>
+            <p>نظام إدارة بيانات الموظفين — سجلات الموظفين والإجازات والتقارير في منصّة واحدة.</p>
         </section>
 
         <!-- ============ النموذج ============ -->
