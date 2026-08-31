@@ -9,6 +9,10 @@ from django.core.exceptions import ValidationError
 OTHER_WORKPLACE = '__other__'
 OTHER_WORKPLACE_TYPE = '__other_type__'
 
+# القيمة كما تُخزَّن في قاعدة البيانات ضمن Employee.EMPLOYEE_TYPE_CHOICES.
+# موظفو الخدمة المدنية على بند التوظيف الحكومي فلا عقد لهم أصلاً.
+CIVIL_SERVICE = 'خدمة مدنية'
+
 
 def normalize_workplace_name(name):
     """يوحّد المسافات حتى لا تتكرر المنشأة بفروق شكلية فقط."""
@@ -150,13 +154,33 @@ class EmployeeForm(forms.ModelForm):
         else:
             cleaned_data['other_workplace_type'] = ''
 
-        # 1. تحقق التواريخ
+        # 1. العقد مرتبط بفئة الموظف:
+        #    - خدمة مدنية: لا عقد، فيُمحى أي تاريخ (يهمّ عند تعديل موظف
+        #      غُيِّرت فئته، وإلا بقيت تواريخ عقد قديمة معلّقة في سجله).
+        #    - غير ذلك: تاريخ نهاية العقد إلزامي.
+        #    الفئة الفارغة لا تُلزم بشيء لأن الحقل نفسه اختياري.
+        employee_type = cleaned_data.get('employee_type')
         start_date = cleaned_data.get('contract_start_date')
         end_date = cleaned_data.get('contract_end_date')
-        if start_date and end_date:
-            if end_date < start_date:
-                raise ValidationError("خطأ: تاريخ نهاية العقد لا يمكن أن يكون قبل تاريخ البداية!")
-                
+
+        if employee_type == CIVIL_SERVICE:
+            cleaned_data['contract_start_date'] = None
+            cleaned_data['contract_end_date'] = None
+            start_date = end_date = None
+        elif employee_type and not end_date:
+            self.add_error(
+                'contract_end_date',
+                'تاريخ نهاية العقد إلزامي لغير موظفي الخدمة المدنية.',
+            )
+
+        # add_error بدل raise: الرفع يقطع clean() فلا تُفحص بقية الحقول،
+        # فيرى المستخدم خطأً واحداً في كل محاولة حفظ.
+        if start_date and end_date and end_date < start_date:
+            self.add_error(
+                'contract_end_date',
+                'تاريخ نهاية العقد لا يمكن أن يكون قبل تاريخ البداية.',
+            )
+
         # 2. تحقق التصنيف المهني
         is_classified = cleaned_data.get('is_classified')
         classification_expiry_date = cleaned_data.get('classification_expiry_date')

@@ -1,795 +1,343 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="light">
-    <meta name="theme-color" content="#0B2A3E">
-    <title>{% block title %}{% endblock %} | تجمع عسير الصحي</title>
+{% extends 'employees/base.html' %}
+{# ===================================================================
+   قالب مشترك لنموذج الموظف — ترثه صفحتا الإضافة والتعديل.
+   لا يُستخدم مباشرة من أي view.
+   =================================================================== #}
 
-    <link rel="icon" type="image/svg+xml" href="{% static 'images/logo.svg' %}">
-    <link rel="shortcut icon" type="image/svg+xml" href="{% static 'images/logo.svg' %}">
+{% block content %}
+<style>
+    .form-shell { max-width: 940px; margin: 0 auto; }
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    .form-section { padding: 22px; border-bottom: 1px solid var(--border); }
+    .form-section:last-of-type { border-bottom: none; }
 
-    <style>
-    /* =====================================================================
-       نظام تصميم تجمع عسير الصحي
-       الهوية اللونية مشتقة من شعار شركة الصحة القابضة (#0088C6)
-       ===================================================================== */
-    :root {
-        /* --- الهوية --- */
-        --brand-50:  #EFF9FE;
-        --brand-100: #D9F0FB;
-        --brand-200: #B3E2F6;
-        --brand-300: #7CCDEF;
-        --brand-400: #3FB2E4;
-        --brand-500: #0F9AD5;
-        --brand-600: #0088C6;   /* لون الشعار */
-        --brand-700: #007BB4;   /* أزرار — نص أبيض يحقق تباين AA */
-        --brand-800: #006391;
-        --brand-900: #0B4A6B;
-
-        /* --- محايدات --- */
-        --ink-900: #0B1F2E;
-        --ink-800: #12293C;
-        --ink-700: #1E3A52;
-        --ink-600: #47617A;
-        --ink-500: #6B8299;
-        --ink-400: #94A8BA;
-        --ink-300: #C3D1DD;
-        --ink-200: #E1E9F0;
-        --ink-100: #EFF3F7;
-        --ink-50:  #F6F9FB;
-
-        --surface: #FFFFFF;
-        --surface-sunken: #F6F9FB;
-        --surface-hover: #EFF3F7;
-
-        --text-strong: var(--ink-900);
-        --text: var(--ink-700);
-        --text-muted: var(--ink-500);
-        --text-faint: var(--ink-400);
-
-        --border: #E1E9F0;
-        --border-strong: #C3D1DD;
-
-        /* --- ألوان دلالية --- */
-        --ok: #0E9F6E;        --ok-bg: #E6F6F0;      --ok-border: #A7E3CD;
-        --warn: #B45309;      --warn-bg: #FEF5E7;    --warn-border: #F5D9A8;
-        --danger: #D92D20;    --danger-bg: #FDECEA;  --danger-border: #F5B5B0;
-        --info: var(--brand-700); --info-bg: var(--brand-50); --info-border: var(--brand-200);
-
-        /* --- الشريط الجانبي --- */
-        --nav-bg: #0B2A3E;
-        --nav-bg-deep: #071E2D;
-        --nav-text: #A9C1D2;
-        --nav-text-strong: #FFFFFF;
-        --nav-hover: rgba(255,255,255,.07);
-        --nav-active: rgba(0,136,198,.20);
-
-        /* --- ظلال هادئة --- */
-        --shadow-xs: 0 1px 2px rgba(11,31,46,.05);
-        --shadow-sm: 0 1px 3px rgba(11,31,46,.07), 0 1px 2px rgba(11,31,46,.04);
-        --shadow-md: 0 4px 12px rgba(11,31,46,.07), 0 2px 4px rgba(11,31,46,.04);
-        --shadow-lg: 0 12px 28px rgba(11,31,46,.11), 0 4px 10px rgba(11,31,46,.05);
-
-        /* --- الأنصاف والمقاسات --- */
-        --r-xs: 6px;  --r-sm: 8px;  --r-md: 10px;  --r-lg: 14px;  --r-xl: 18px;  --r-pill: 999px;
-        --nav-w: 268px;
-        --header-h: 68px;
+    .form-section-head {
+        display: flex; align-items: center; gap: 11px;
+        margin-bottom: 18px;
     }
-
-    * { box-sizing: border-box; }
-
-    body {
-        font-family: 'Cairo', system-ui, -apple-system, 'Segoe UI', sans-serif;
-        background-color: var(--surface-sunken);
-        color: var(--text);
-        font-size: .9375rem;
-        line-height: 1.6;
-        margin: 0;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-    }
-
-    /* الأرقام بعرض ثابت — يمنع رقص الأعمدة في الجداول والإحصاءات */
-    .num, .stat-value, .premium-table td, .premium-table th, .data-table td {
+    .form-section-head h3 { font-size: .9375rem; font-weight: 800; margin: 0; }
+    .form-section-head .step {
+        margin-right: auto;
+        font-size: .75rem; font-weight: 700; color: var(--text-faint);
         font-variant-numeric: tabular-nums;
-        font-feature-settings: "tnum";
     }
 
-    a { text-decoration: none; color: var(--brand-700); transition: color .18s ease; }
-    a:hover { color: var(--brand-800); }
-
-    h1, h2, h3, h4, h5, h6 { color: var(--text-strong); font-weight: 800; letter-spacing: -.01em; }
-
-    /* حلقة تركيز واضحة لمستخدمي لوحة المفاتيح */
-    :focus-visible {
-        outline: 2px solid var(--brand-600);
-        outline-offset: 2px;
-        border-radius: var(--r-xs);
+    /* الحقول المشروطة تظهر بانسياب */
+    .conditional-field {
+        animation: revealField .28s ease;
+    }
+    @keyframes revealField {
+        from { opacity: 0; transform: translateY(-6px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .conditional-field .form-label { color: var(--brand-800); }
+    .conditional-field .form-label::after {
+        content: '\f0d9';
+        font-family: 'Font Awesome 6 Free'; font-weight: 900;
+        font-size: .5rem; color: var(--brand-400);
+        margin-right: 5px; vertical-align: middle;
     }
 
-    ::selection { background: var(--brand-100); color: var(--brand-900); }
-
-    /* =====================================================================
-       الهيكل العام
-       ===================================================================== */
-    .app-container { display: flex; min-height: 100vh; }
-
-    /* --- الشريط الجانبي --- */
-    .sidebar {
-        width: var(--nav-w);
-        background: linear-gradient(180deg, var(--nav-bg) 0%, var(--nav-bg-deep) 100%);
-        display: flex;
-        flex-direction: column;
-        position: fixed;
-        top: 0; right: 0; bottom: 0;
-        z-index: 1040;
-        transition: transform .28s cubic-bezier(.4,0,.2,1);
-    }
-
-    .sidebar-header {
-        height: var(--header-h);
-        display: flex;
-        align-items: center;
-        padding: 0 20px;
-        border-bottom: 1px solid rgba(255,255,255,.08);
-        flex-shrink: 0;
-    }
-
-    .hospital-brand-wrapper { display: flex; align-items: center; gap: 12px; width: 100%; }
-
-    .hospital-logo {
-        width: 40px; height: 40px;
-        background: #fff;
-        border-radius: var(--r-sm);
-        display: flex; align-items: center; justify-content: center;
-        overflow: hidden; flex-shrink: 0;
-        padding: 5px;
-    }
-    .hospital-logo img { width: 100%; height: 100%; object-fit: contain; }
-
-    .hospital-details { display: flex; flex-direction: column; min-width: 0; }
-    .hospital-name {
-        font-size: .9375rem; font-weight: 800; color: var(--nav-text-strong);
-        line-height: 1.25; white-space: nowrap;
-    }
-    .hospital-sub {
-        font-size: .6875rem; font-weight: 600; color: var(--nav-text);
-        line-height: 1.3; opacity: .8;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-
-    .sidebar-menu { padding: 16px 12px 24px; flex-grow: 1; overflow-y: auto; }
-    .sidebar-menu::-webkit-scrollbar { width: 4px; }
-    .sidebar-menu::-webkit-scrollbar-track { background: transparent; }
-    .sidebar-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: var(--r-pill); }
-
-    .menu-label {
-        font-size: .6875rem; font-weight: 800; color: var(--nav-text);
-        opacity: .55; letter-spacing: .06em;
-        padding: 0 12px; margin: 22px 0 8px;
-    }
-    .menu-label:first-child { margin-top: 4px; }
-
-    .menu-item {
-        display: flex; align-items: center; gap: 2px;
-        padding: 10px 12px;
-        color: var(--nav-text);
-        border-radius: var(--r-md);
-        font-weight: 700; font-size: .9rem;
-        margin-bottom: 2px;
-        position: relative;
-        transition: background-color .18s ease, color .18s ease;
-    }
-    .menu-item i { width: 26px; font-size: 1rem; text-align: center; opacity: .75; transition: opacity .18s ease; }
-    .menu-item:hover { background: var(--nav-hover); color: var(--nav-text-strong); }
-    .menu-item:hover i { opacity: 1; }
-
-    .menu-item.active {
-        background: var(--nav-active);
-        color: var(--nav-text-strong);
-    }
-    .menu-item.active i { opacity: 1; color: var(--brand-300); }
-
-    /* --- المنطقة الرئيسية --- */
-    .main-wrapper {
-        flex-grow: 1;
-        margin-right: var(--nav-w);
-        display: flex; flex-direction: column;
-        min-height: 100vh; min-width: 0;
-    }
-
-    .top-header {
-        height: var(--header-h);
-        background: rgba(255,255,255,.88);
-        backdrop-filter: saturate(180%) blur(12px);
-        -webkit-backdrop-filter: saturate(180%) blur(12px);
-        border-bottom: 1px solid var(--border);
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 0 24px;
-        position: sticky; top: 0; z-index: 1020;
-        gap: 16px;
-    }
-
-    .page-title-group { display: flex; align-items: center; gap: 12px; min-width: 0; }
-    .page-title-group h1 {
-        font-size: 1.0625rem; font-weight: 800; margin: 0;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-
-    /* زر القائمة للجوال */
-    .nav-toggle {
-        display: none;
-        width: 38px; height: 38px;
-        align-items: center; justify-content: center;
-        border-radius: var(--r-sm);
-        border: 1px solid var(--border);
-        background: var(--surface);
-        color: var(--text);
-        font-size: 1rem; cursor: pointer;
-        flex-shrink: 0;
-    }
-    .nav-toggle:hover { background: var(--surface-hover); }
-
-    .header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-
-    .user-chip {
-        display: flex; align-items: center; gap: 10px;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        padding: 4px 12px 4px 4px;
-        border-radius: var(--r-pill);
-    }
-    .avatar {
-        width: 30px; height: 30px;
-        background: var(--brand-600); color: #fff;
-        border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        font-weight: 800; font-size: .8125rem;
-        flex-shrink: 0;
-    }
-    .user-name { font-size: .8125rem; font-weight: 700; color: var(--text-strong); white-space: nowrap; }
-
-    .logout-btn {
-        width: 38px; height: 38px;
-        display: flex; align-items: center; justify-content: center;
-        border-radius: var(--r-sm);
-        background: var(--surface); color: var(--text-muted);
-        border: 1px solid var(--border);
-        cursor: pointer; padding: 0;
-        transition: all .18s ease;
-    }
-    .logout-btn:hover { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-border); }
-
-    .content-area { padding: 24px; flex-grow: 1; }
-    @media (min-width: 1400px) { .content-area { padding: 28px 32px; } }
-
-    /* غطاء الجوال */
-    .nav-scrim {
-        position: fixed; inset: 0;
-        background: rgba(11,31,46,.5);
-        backdrop-filter: blur(2px);
-        z-index: 1035;
-        opacity: 0; visibility: hidden;
-        transition: opacity .28s ease, visibility .28s ease;
-    }
-    body.nav-open .nav-scrim { opacity: 1; visibility: visible; }
-
-    /* =====================================================================
-       المكوّنات — تُستخدم في كل الصفحات
-       ===================================================================== */
-
-    /* --- اللوحة --- */
-    .panel {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--r-lg);
-        box-shadow: var(--shadow-sm);
-        overflow: hidden;
-    }
-    .panel-header {
-        padding: 18px 22px;
-        border-bottom: 1px solid var(--border);
-        display: flex; justify-content: space-between; align-items: center;
-        gap: 16px; flex-wrap: wrap;
-    }
-    .panel-title {
-        font-size: 1.0625rem; font-weight: 800; color: var(--text-strong);
-        margin: 0; display: flex; align-items: center; gap: 11px;
-    }
-    .panel-title .tint { width: 34px; height: 34px; font-size: .95rem; border-radius: var(--r-sm); }
-    .panel-body { padding: 22px; }
-    .panel-footer {
-        padding: 16px 22px;
-        background: var(--surface-sunken);
-        border-top: 1px solid var(--border);
-        display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;
-    }
-
-    /* --- مربع أيقونة ملوّن --- */
-    .tint {
-        width: 38px; height: 38px;
-        border-radius: var(--r-md);
-        display: inline-flex; align-items: center; justify-content: center;
-        font-size: 1rem; flex-shrink: 0;
-    }
-    .tint-brand  { background: var(--brand-50);  color: var(--brand-700); }
-    .tint-ok     { background: var(--ok-bg);     color: var(--ok); }
-    .tint-warn   { background: var(--warn-bg);   color: var(--warn); }
-    .tint-danger { background: var(--danger-bg); color: var(--danger); }
-    .tint-neutral{ background: var(--ink-100);   color: var(--ink-600); }
-    .tint-violet { background: #F1EDFD;          color: #6D3BEB; }
-
-    /* --- الأزرار --- */
-    .btn-app {
-        border-radius: var(--r-md);
-        padding: 9px 16px;
-        font-weight: 700; font-size: .875rem;
-        font-family: inherit;
-        border: 1px solid transparent;
-        display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-        cursor: pointer;
-        white-space: nowrap;
-        transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
-    }
-    .btn-app:active { transform: translateY(.5px); }
-
-    .btn-primary-app { background: var(--brand-700); color: #fff; box-shadow: var(--shadow-xs); }
-    .btn-primary-app:hover { background: var(--brand-800); color: #fff; box-shadow: var(--shadow-sm); }
-
-    .btn-outline-app { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
-    .btn-outline-app:hover { background: var(--surface-hover); color: var(--text-strong); border-color: var(--ink-400); }
-
-    .btn-ok-app { background: var(--ok-bg); color: var(--ok); border-color: var(--ok-border); }
-    .btn-ok-app:hover { background: var(--ok); color: #fff; border-color: var(--ok); }
-
-    .btn-danger-app { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-border); }
-    .btn-danger-app:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
-
-    .btn-lg-app { padding: 11px 22px; font-size: .9375rem; }
-    .btn-sm-app { padding: 6px 12px; font-size: .8125rem; }
-
-    /* --- أزرار الإجراءات الدائرية في الجداول --- */
-    .action-circle {
-        width: 34px; height: 34px;
-        display: inline-flex; align-items: center; justify-content: center;
-        border-radius: var(--r-sm);
-        background: var(--surface); color: var(--text-muted);
-        border: 1px solid var(--border);
-        cursor: pointer; padding: 0;
-        font-size: .8125rem;
-        transition: all .18s ease;
-    }
-    .action-circle:hover { background: var(--brand-50); color: var(--brand-700); border-color: var(--brand-200); }
-    .action-circle-danger:hover { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-border); }
-    .action-circle-ok:hover { background: var(--ok-bg); color: var(--ok); border-color: var(--ok-border); }
-
-    /* --- الجداول --- */
-    .table-scroll { overflow-x: auto; }
-    .premium-table { width: 100%; margin: 0; border-collapse: separate; border-spacing: 0; }
-    .premium-table th {
-        background: var(--surface-sunken);
-        color: var(--text-muted);
-        font-size: .75rem; font-weight: 800;
-        letter-spacing: .03em;
-        padding: 11px 20px;
-        border-bottom: 1px solid var(--border);
-        white-space: nowrap;
-        text-align: right;
-        position: sticky; top: 0; z-index: 2;
-    }
-    .premium-table td {
-        padding: 14px 20px;
-        border-bottom: 1px solid var(--ink-100);
-        color: var(--text);
-        font-size: .875rem;
-        vertical-align: middle;
-    }
-    .premium-table tbody tr:last-child td { border-bottom: none; }
-    .premium-table tbody tr { transition: background-color .14s ease; }
-    .premium-table tbody tr:hover td { background: var(--brand-50); }
-
-    /* السطر الأساسي والثانوي داخل الخلية */
-    .cell-primary { font-weight: 700; color: var(--text-strong); line-height: 1.4; }
-    .cell-secondary {
-        font-size: .8125rem; color: var(--text-muted); margin-top: 2px;
-        display: flex; align-items: center; gap: 5px;
-    }
-    .cell-secondary i { font-size: .75rem; opacity: .7; }
-
-    /* --- الشارات --- */
-    .badge-app {
-        padding: 4px 11px;
-        border-radius: var(--r-pill);
-        font-size: .75rem; font-weight: 700;
-        display: inline-flex; align-items: center; gap: 5px;
-        border: 1px solid transparent;
-        white-space: nowrap;
-    }
-    .badge-ok      { background: var(--ok-bg);     color: var(--ok);        border-color: var(--ok-border); }
-    .badge-warn    { background: var(--warn-bg);   color: var(--warn);      border-color: var(--warn-border); }
-    .badge-danger  { background: var(--danger-bg); color: var(--danger);    border-color: var(--danger-border); }
-    .badge-info    { background: var(--brand-50);  color: var(--brand-800); border-color: var(--brand-200); }
-    .badge-neutral { background: var(--ink-100);   color: var(--ink-600);   border-color: var(--ink-200); }
-
-    /* --- بطاقة إحصاء --- */
-    .stat-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--r-lg);
-        padding: 18px;
-        height: 100%;
-        display: flex; flex-direction: column;
-        transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
-    }
-    .stat-card:hover { border-color: var(--brand-200); box-shadow: var(--shadow-md); transform: translateY(-2px); }
-    .stat-card .tint { margin-bottom: 14px; }
-    .stat-value {
-        font-size: 1.75rem; font-weight: 800; color: var(--text-strong);
-        margin: 0; line-height: 1.1; letter-spacing: -.02em;
-    }
-    .stat-label { font-size: .8125rem; font-weight: 600; color: var(--text-muted); margin: 5px 0 0; }
-
-    /* --- عناوين الأقسام --- */
-    .section-title {
-        font-size: .9375rem; font-weight: 800; color: var(--text-strong);
-        margin: 0 0 14px; display: flex; align-items: center; gap: 9px;
-    }
-    .section-title i { color: var(--brand-600); font-size: .9375rem; }
-
-    /* --- الحالة الفارغة --- */
-    .empty-state { text-align: center; padding: 52px 24px; }
-    .empty-state .tint {
-        width: 60px; height: 60px; font-size: 1.5rem;
-        margin: 0 auto 16px; border-radius: var(--r-lg);
-    }
-    .empty-state h6 { font-weight: 800; color: var(--text-strong); font-size: 1rem; margin: 0 0 6px; }
-    .empty-state p { font-size: .875rem; color: var(--text-muted); margin: 0 auto; max-width: 340px; }
-
-    /* --- التنبيهات --- */
-    .alert-app {
-        border-radius: var(--r-lg);
-        border: 1px solid;
+    .switch-box {
         padding: 16px 18px;
-        box-shadow: var(--shadow-xs);
-    }
-    .alert-danger-app { background: var(--danger-bg); border-color: var(--danger-border); color: #8A1D14; }
-    .alert-warn-app   { background: var(--warn-bg);   border-color: var(--warn-border);   color: #7A3B06; }
-    .alert-info-app   { background: var(--brand-50);  border-color: var(--brand-200);     color: var(--brand-900); }
-    .alert-app .alert-list { margin: 0; padding-right: 18px; font-size: .8125rem; font-weight: 600; line-height: 1.9; }
-    .alert-app .alert-list a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
-
-    /* --- حقول الإدخال --- */
-    .form-label {
-        font-size: .8125rem; font-weight: 700; color: var(--text);
-        margin-bottom: 6px; display: block;
-    }
-    .form-control, .form-select, .premium-input {
-        border-radius: var(--r-md) !important;
-        border: 1px solid var(--border-strong) !important;
-        padding: 9px 13px !important;
-        font-size: .875rem !important;
-        font-weight: 600 !important;
-        font-family: inherit !important;
-        color: var(--text-strong) !important;
-        background-color: var(--surface) !important;
-        box-shadow: none !important;
-        transition: border-color .18s ease, box-shadow .18s ease !important;
-        width: 100%;
-    }
-    .form-control:focus, .form-select:focus, .premium-input:focus {
-        border-color: var(--brand-600) !important;
-        box-shadow: 0 0 0 3px var(--brand-100) !important;
-        outline: none !important;
-    }
-    .form-control::placeholder, .premium-input::placeholder { color: var(--text-faint) !important; font-weight: 500; }
-    textarea.form-control { line-height: 1.6; }
-
-    .form-switch .form-check-input { width: 2.6em; height: 1.4em; cursor: pointer; }
-    .form-switch .form-check-input:checked { background-color: var(--brand-700); border-color: var(--brand-700); }
-    .form-check-input:focus { box-shadow: 0 0 0 3px var(--brand-100); border-color: var(--brand-500); }
-
-    /* حقل بحث مع أيقونة */
-    .search-field { position: relative; }
-    .search-field i {
-        position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
-        color: var(--text-faint); font-size: .8125rem; pointer-events: none;
-    }
-    .search-field input { padding-right: 36px !important; }
-
-    /* منطقة الفلاتر */
-    .filter-bar {
         background: var(--surface-sunken);
-        padding: 16px 22px;
-        border-bottom: 1px solid var(--border);
-    }
-
-    /* --- بطاقات الاختيار (radio) --- */
-    .choice-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
-
-    .choice-card {
-        position: relative;
-        border: 1px solid var(--border);
-        border-radius: var(--r-lg);
-        padding: 16px;
-        cursor: pointer;
-        background: var(--surface);
-        transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease;
-        display: block;
-    }
-    .choice-card:hover { border-color: var(--border-strong); background: var(--surface-sunken); }
-    .choice-card input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
-
-    .choice-inner { display: flex; gap: 13px; align-items: flex-start; }
-    .choice-icon {
-        width: 38px; height: 38px; flex-shrink: 0;
         border-radius: var(--r-md);
-        display: flex; align-items: center; justify-content: center;
-        font-size: .9375rem;
-        background: var(--ink-100); color: var(--ink-500);
-        transition: background-color .18s ease, color .18s ease;
-    }
-    .choice-title { font-weight: 800; color: var(--text-strong); font-size: .9375rem; margin-bottom: 3px; }
-    .choice-desc { font-size: .8125rem; color: var(--text-muted); line-height: 1.6; font-weight: 500; }
-
-    /* الحالة المختارة — الافتراضي بلون الهوية */
-    .choice-card:has(input:checked) { border-color: var(--brand-600); background: var(--brand-50); box-shadow: 0 0 0 1px var(--brand-600) inset; }
-    .choice-card:has(input:checked) .choice-icon { background: var(--brand-600); color: #fff; }
-
-    .choice-card.is-ok:has(input:checked) { border-color: var(--ok); background: var(--ok-bg); box-shadow: 0 0 0 1px var(--ok) inset; }
-    .choice-card.is-ok:has(input:checked) .choice-icon { background: var(--ok); color: #fff; }
-
-    .choice-card.is-danger:has(input:checked) { border-color: var(--danger); background: var(--danger-bg); box-shadow: 0 0 0 1px var(--danger) inset; }
-    .choice-card.is-danger:has(input:checked) .choice-icon { background: var(--danger); color: #fff; }
-
-    /* حلقة تركيز للتنقل بلوحة المفاتيح */
-    .choice-card:has(input:focus-visible) { outline: 2px solid var(--brand-600); outline-offset: 2px; }
-
-    /* --- التبويبات --- */
-    .app-tabs {
-        display: flex; gap: 4px;
-        padding: 0 22px;
-        border-bottom: 1px solid var(--border);
-        list-style: none; margin: 0;
-    }
-    .app-tabs .nav-link {
-        background: transparent; border: none;
-        border-bottom: 2px solid transparent;
-        border-radius: 0;
-        color: var(--text-muted);
-        font-weight: 700; font-size: .875rem;
-        font-family: inherit;
-        padding: 13px 14px;
-        cursor: pointer;
-        transition: color .18s ease, border-color .18s ease;
-    }
-    .app-tabs .nav-link:hover { color: var(--text-strong); }
-    .app-tabs .nav-link.active { color: var(--brand-700); border-bottom-color: var(--brand-600); }
-    .tab-badge {
-        background: var(--ink-100); color: var(--ink-600);
-        margin-right: 6px;
-        border-radius: var(--r-pill);
-        padding: 1px 8px;
-        font-size: .75rem; font-weight: 800;
-    }
-    .app-tabs .nav-link.active .tab-badge { background: var(--brand-100); color: var(--brand-800); }
-
-    /* --- الإشعارات --- */
-    .toast-container { z-index: 1080; padding: 20px !important; }
-    .premium-toast {
-        background: var(--surface) !important;
-        border: 1px solid var(--border) !important;
-        border-right: 3px solid var(--ok) !important;
-        border-radius: var(--r-lg) !important;
-        box-shadow: var(--shadow-lg) !important;
-        padding: 4px;
-        min-width: 300px;
-    }
-    .toast-body {
-        font-size: .875rem; font-weight: 700; color: var(--text-strong);
-        display: flex; align-items: center; gap: 10px;
+        border: 1px solid var(--border);
     }
 
-    /* =====================================================================
-       الاستجابة للشاشات الصغيرة
-       ===================================================================== */
-    @media (max-width: 991.98px) {
-        .sidebar { transform: translateX(100%); box-shadow: var(--shadow-lg); }
-        body.nav-open .sidebar { transform: translateX(0); }
-        .main-wrapper { margin-right: 0; }
-        .nav-toggle { display: inline-flex; }
-        .content-area { padding: 16px; }
-        .top-header { padding: 0 16px; }
-        .user-name { display: none; }
-        .user-chip { padding: 4px; border: none; background: transparent; }
-        .premium-table th, .premium-table td { padding: 12px 14px; }
-        .panel-header, .filter-bar, .panel-body { padding-inline: 16px; }
-        .app-tabs { padding-inline: 16px; }
-    }
-
-    @media (max-width: 575.98px) {
-        .panel-header { flex-direction: column; align-items: stretch; }
-        .panel-header .btn-app { width: 100%; }
-        .stat-value { font-size: 1.5rem; }
-    }
-
-    /* تقليل الحركة لمن يفضّل ذلك */
     @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+        .conditional-field { animation: none; }
     }
+</style>
 
-    /* =====================================================================
-       الطباعة — لإخراج تقارير نظيفة
-       ===================================================================== */
-    @media print {
-        .sidebar, .top-header, .nav-scrim, .toast-container,
-        .filter-bar, .panel-footer, .action-circle, .btn-app { display: none !important; }
-        .main-wrapper { margin: 0 !important; }
-        .content-area { padding: 0 !important; }
-        body { background: #fff; font-size: 11pt; }
-        .panel { border: 1px solid #ccc; box-shadow: none; border-radius: 0; }
-        .premium-table th { background: #f2f2f2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .premium-table tbody tr:hover td { background: transparent; }
-        a[href]::after { content: ''; }
-    }
-    </style>
-</head>
-<body>
+<div class="form-shell">
 
-<div class="app-container">
+    {% if form.errors %}
+    <div class="alert-app alert-danger-app mb-3" role="alert">
+        <strong class="d-block mb-2" style="font-size:.9375rem;">
+            <i class="fas fa-circle-exclamation me-1"></i> يرجى مراجعة الأخطاء التالية
+        </strong>
+        <ul class="alert-list">
+            {% for field in form %}
+                {% for error in field.errors %}
+                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 
-    <!-- ================= الشريط الجانبي ================= -->
-    <aside class="sidebar" id="appSidebar">
-        <div class="sidebar-header">
-            <a href="{% url 'dashboard' %}" class="hospital-brand-wrapper">
-                <div class="hospital-logo">
-                    <img src="{% static 'images/logo.svg' %}" alt="شعار تجمع عسير الصحي">
-                </div>
-                <div class="hospital-details">
-                    <span class="hospital-name">تجمع عسير الصحي</span>
-                    <span class="hospital-sub" > إدارة المستشفيات والمراكز المتخصصة</span>
-                </div>
+    <form method="POST" class="panel" novalidate>
+        {% csrf_token %}
+
+        <div class="panel-header">
+            <div>
+                <h2 class="panel-title">{% block form_heading %}بيانات الموظف{% endblock %}</h2>
+                <p style="font-size:.8125rem; color:var(--text-muted); margin:5px 0 0;">
+                    {% block form_subheading %}أدخل المعلومات الشخصية والمهنية بعناية.{% endblock %}
+                </p>
+            </div>
+            <a href="{% url 'employee_list' %}" class="btn-app btn-outline-app">
+                <i class="fas fa-xmark"></i> إلغاء
             </a>
         </div>
 
-        <nav class="sidebar-menu">
-            <div class="menu-label">الرئيسية</div>
-            <a href="{% url 'dashboard' %}" class="menu-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                <i class="fas fa-chart-pie"></i> لوحة القيادة
-            </a>
-
-            <div class="menu-label">إدارة الموظفين</div>
-            <a href="{% url 'employee_list' %}" class="menu-item {% if request.resolver_match.url_name == 'employee_list' or request.resolver_match.url_name == 'edit_employee' %}active{% endif %}">
-                <i class="fas fa-users"></i> الموظفين
-            </a>
-            <a href="{% url 'add_employee' %}" class="menu-item {% if request.resolver_match.url_name == 'add_employee' %}active{% endif %}">
-                <i class="fas fa-user-plus"></i> إضافة موظف
-            </a>
-            <a href="{% url 'leave_list' %}" class="menu-item {% if 'leaves' in request.path %}active{% endif %}">
-                <i class="fas fa-umbrella-beach"></i> الإجازات
-            </a>
-            <a href="{% url 'reconcile_employees' %}" class="menu-item {% if 'reconcile' in request.path %}active{% endif %}">
-                <i class="fas fa-file-import"></i> مطابقة ملف Excel
-            </a>
-            <a href="{% url 'archived_employee_list' %}" class="menu-item {% if 'archive' in request.path %}active{% endif %}">
-                <i class="fas fa-box-archive"></i> أرشيف الموظفين
-            </a>
-
-            {% if request.user.is_superuser %}
-            <div class="menu-label">إدارة النظام</div>
-            <a href="{% url 'user_list' %}" class="menu-item {% if 'users' in request.path %}active{% endif %}">
-                <i class="fas fa-shield-halved"></i> الصلاحيات
-            </a>
-            <a href="{% url 'system_settings' %}" class="menu-item {% if request.resolver_match.url_name == 'system_settings' %}active{% endif %}">
-                <i class="fas fa-sliders"></i> إعدادات النظام
-            </a>
-            <a href="{% url 'activity_log_list' %}" class="menu-item {% if 'audit-log' in request.path %}active{% endif %}">
-                <i class="fas fa-clock-rotate-left"></i> سجل النشاطات
-            </a>
-            {% endif %}
-        </nav>
-    </aside>
-
-    <div class="nav-scrim" id="navScrim" aria-hidden="true"></div>
-
-    <!-- ================= المحتوى ================= -->
-    <main class="main-wrapper">
-
-        <header class="top-header">
-            <div class="page-title-group">
-                <button type="button" class="nav-toggle" id="navToggle" aria-label="فتح القائمة" aria-controls="appSidebar" aria-expanded="false">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <h1>{% block page_title %}{% endblock %}</h1>
+        <!-- ============ 1. المعلومات الشخصية ============ -->
+        <div class="form-section">
+            <div class="form-section-head">
+                <span class="tint tint-brand"><i class="fas fa-id-card"></i></span>
+                <h3>المعلومات الشخصية</h3>
+                <span class="step">1 / 3</span>
             </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
+                    {{ form.full_name }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="{{ form.national_id.id_for_label }}">{{ form.national_id.label }}</label>
+                    {{ form.national_id }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="{{ form.employee_number.id_for_label }}">{{ form.employee_number.label }}</label>
+                    {{ form.employee_number }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.nationality.id_for_label }}">{{ form.nationality.label }}</label>
+                    {{ form.nationality }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.dob.id_for_label }}">{{ form.dob.label }}</label>
+                    {{ form.dob }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.gender.id_for_label }}">{{ form.gender.label }}</label>
+                    {{ form.gender }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.mobile_number.id_for_label }}">{{ form.mobile_number.label }}</label>
+                    {{ form.mobile_number }}
+                </div>
+            </div>
+        </div>
 
-            <div class="header-actions">
-                <div class="user-chip">
-                    <span class="user-name">{{ request.user.first_name|default:request.user.username }}</span>
-                    <div class="avatar" aria-hidden="true">{{ request.user.username|make_list|first|upper }}</div>
+        <!-- ============ 2. التعيين والتخصص ============ -->
+        <div class="form-section">
+            <div class="form-section-head">
+                <span class="tint tint-ok"><i class="fas fa-briefcase"></i></span>
+                <h3>التعيين والتخصص</h3>
+                <span class="step">2 / 3</span>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.workplace_type.id_for_label }}">{{ form.workplace_type.label }}</label>
+                    {{ form.workplace_type }}
                 </div>
 
-                <form method="POST" action="{% url 'logout' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="logout-btn" title="تسجيل خروج" aria-label="تسجيل خروج">
-                        <i class="fas fa-arrow-right-from-bracket"></i>
-                    </button>
-                </form>
-            </div>
-        </header>
+                <div class="col-md-4 conditional-field" id="other-type-box" style="display:none;">
+                    <label class="form-label" for="{{ form.other_workplace_type.id_for_label }}">
+                        {{ form.other_workplace_type.label }}
+                    </label>
+                    {{ form.other_workplace_type }}
+                </div>
 
-        <!-- الإشعارات -->
-        <div class="toast-container position-fixed bottom-0 start-0">
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="toast premium-toast align-items-center show" role="alert" aria-live="assertive" aria-atomic="true"
-                         style="{% if message.tags == 'error' %}border-right-color: var(--danger) !important;{% elif message.tags == 'warning' %}border-right-color: var(--warn) !important;{% endif %}">
-                        <div class="d-flex align-items-center w-100">
-                            <div class="toast-body flex-grow-1">
-                                {% if message.tags == 'success' %}
-                                    <i class="fas fa-circle-check" style="color: var(--ok); font-size: 1.05rem;"></i>
-                                {% elif message.tags == 'error' %}
-                                    <i class="fas fa-circle-exclamation" style="color: var(--danger); font-size: 1.05rem;"></i>
-                                {% else %}
-                                    <i class="fas fa-circle-info" style="color: var(--warn); font-size: 1.05rem;"></i>
-                                {% endif %}
-                                {{ message }}
-                            </div>
-                            <button type="button" class="btn-close me-2" data-bs-dismiss="toast" aria-label="إغلاق" style="opacity:.4; font-size:.7rem;"></button>
+                <div class="col-md-4 conditional-field" id="time-type-box" style="display:none;">
+                    <label class="form-label" for="{{ form.time_type.id_for_label }}">{{ form.time_type.label }}</label>
+                    {{ form.time_type }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.current_workplace.id_for_label }}">{{ form.current_workplace.label }}</label>
+                    {{ form.current_workplace }}
+                </div>
+
+                <div class="col-md-4 conditional-field" id="new-workplace-box" style="display:none;">
+                    <label class="form-label" for="{{ form.new_workplace_name.id_for_label }}">
+                        {{ form.new_workplace_name.label }}
+                    </label>
+                    {{ form.new_workplace_name }}
+                    <div style="font-size:.75rem; color:var(--text-faint); margin-top:5px; font-weight:600;">
+                        تُضاف إلى قائمة المنشآت وتصبح متاحة للاختيار لاحقاً.
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.current_department.id_for_label }}">{{ form.current_department.label }}</label>
+                    {{ form.current_department }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+                    {{ form.status }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.general_specialty.id_for_label }}">{{ form.general_specialty.label }}</label>
+                    {{ form.general_specialty }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.has_sub_specialty.id_for_label }}">{{ form.has_sub_specialty.label }}</label>
+                    {{ form.has_sub_specialty }}
+                </div>
+
+                <div class="col-md-4 conditional-field" id="sub-specialty-box" style="display:none;">
+                    <label class="form-label" for="{{ form.sub_specialty.id_for_label }}">{{ form.sub_specialty.label }}</label>
+                    {{ form.sub_specialty }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.is_classified.id_for_label }}">{{ form.is_classified.label }}</label>
+                    {{ form.is_classified }}
+                </div>
+
+                <div class="col-md-4 conditional-field" id="class-expiry-box" style="display:none;">
+                    <label class="form-label" for="{{ form.classification_expiry_date.id_for_label }}">
+                        {{ form.classification_expiry_date.label }}
+                    </label>
+                    {{ form.classification_expiry_date }}
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ 3. العقد والتكليف الإداري ============ -->
+        <div class="form-section">
+            <div class="form-section-head">
+                <span class="tint tint-warn"><i class="fas fa-file-signature"></i></span>
+                <h3>العقد والتكليف الإداري</h3>
+                <span class="step">3 / 3</span>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.employee_type.id_for_label }}">{{ form.employee_type.label }}</label>
+                    {{ form.employee_type }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.employee_category.id_for_label }}">{{ form.employee_category.label }}</label>
+                    {{ form.employee_category }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ form.contract_job_title.id_for_label }}">{{ form.contract_job_title.label }}</label>
+                    {{ form.contract_job_title }}
+                </div>
+                <div class="col-md-6 conditional-field" id="contract-start-box" style="display:none;">
+                    <label class="form-label" for="{{ form.contract_start_date.id_for_label }}">{{ form.contract_start_date.label }}</label>
+                    {{ form.contract_start_date }}
+                </div>
+                <div class="col-md-6 conditional-field" id="contract-end-box" style="display:none;">
+                    <label class="form-label" for="{{ form.contract_end_date.id_for_label }}">
+                        {{ form.contract_end_date.label }}
+                        <span id="contract-end-required" style="color:var(--danger); display:none;">*</span>
+                    </label>
+                    {{ form.contract_end_date }}
+                </div>
+
+                <div class="col-12 mt-2">
+                    <div class="switch-box">
+                        <div class="form-check form-switch mb-0 d-flex align-items-center gap-3">
+                            {{ form.is_admin_assigned }}
+                            <label class="form-check-label fw-bold m-0" style="color:var(--text-strong); cursor:pointer;"
+                                   for="{{ form.is_admin_assigned.id_for_label }}">
+                                {{ form.is_admin_assigned.label }}
+                            </label>
+                        </div>
+                        <div id="admin-details-box" class="mt-3 conditional-field" style="display:none;">
+                            <label class="form-label" for="{{ form.admin_work_details.id_for_label }}">
+                                {{ form.admin_work_details.label }}
+                            </label>
+                            {{ form.admin_work_details }}
                         </div>
                     </div>
-                {% endfor %}
-            {% endif %}
+                </div>
+            </div>
         </div>
 
-        <div class="content-area">
-            {% block content %}{% endblock %}
+        <div class="panel-footer">
+            <a href="{% url 'employee_list' %}" class="btn-app btn-outline-app">إلغاء</a>
+            <button type="submit" class="btn-app btn-primary-app btn-lg-app">
+                <i class="fas fa-circle-check"></i> {% block submit_label %}حفظ بيانات الموظف{% endblock %}
+            </button>
         </div>
-
-    </main>
+    </form>
 </div>
+{% endblock %}
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    // الإشعارات
-    document.querySelectorAll('.toast').forEach(function (el, i) {
-        var t = new bootstrap.Toast(el, { delay: 4500 });
-        setTimeout(function () { t.show(); }, i * 180);
-    });
 
-    // قائمة الجوال
-    var toggle = document.getElementById('navToggle');
-    var scrim = document.getElementById('navScrim');
+    /**
+     * يربط حقلاً مشروطاً بحقل تحكّم: يُظهره عند تحقق الشرط،
+     * ويُخفيه ويُفرّغ قيمته فيما عدا ذلك حتى لا تُحفظ بيانات متناقضة.
+     */
+    function bindConditional(controlId, boxId, inputId, isVisible) {
+        var control = document.getElementById(controlId);
+        var box = document.getElementById(boxId);
+        var input = document.getElementById(inputId);
+        if (!control || !box) return;
 
-    function setNav(open) {
-        document.body.classList.toggle('nav-open', open);
-        if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        function apply() {
+            if (isVisible(control)) {
+                box.style.display = '';
+            } else {
+                box.style.display = 'none';
+                if (input) {
+                    if (input.tagName === 'SELECT') input.selectedIndex = 0;
+                    else input.value = '';
+                }
+            }
+        }
+
+        apply();
+        control.addEventListener('change', apply);
     }
 
-    if (toggle) toggle.addEventListener('click', function () {
-        setNav(!document.body.classList.contains('nav-open'));
-    });
-    if (scrim) scrim.addEventListener('click', function () { setNav(false); });
+    // التكليف الإداري → تفاصيل العمل الإداري
+    bindConditional('id_is_admin_assigned', 'admin-details-box', 'id_admin_work_details',
+        function (c) { return c.checked; });
 
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') setNav(false);
-    });
+    // التصنيف المهني → تاريخ انتهاء التصنيف
+    bindConditional('id_is_classified', 'class-expiry-box', 'id_classification_expiry_date',
+        function (c) { return c.value === 'مصنف'; });
 
-    // إغلاق القائمة عند الانتقال لصفحة أخرى على الجوال
-    document.querySelectorAll('.sidebar .menu-item').forEach(function (link) {
-        link.addEventListener('click', function () { setNav(false); });
-    });
+    // نوع المنشأة → التفرّغ
+    bindConditional('id_workplace_type', 'time-type-box', 'id_time_type',
+        function (c) { return c.value === 'مدن طبية' || c.value === 'جامعة الملك خالد'; });
+
+    // نوع المنشأة «أخرى» → كتابة النوع
+    bindConditional('id_workplace_type', 'other-type-box', 'id_other_workplace_type',
+        function (c) { return c.value === '__other_type__'; });
+
+    // وجود تخصص دقيق → التخصص الدقيق
+    bindConditional('id_has_sub_specialty', 'sub-specialty-box', 'id_sub_specialty',
+        function (c) { return c.value === 'نعم'; });
+
+    // المنشأة «أخرى» → كتابة اسم منشأة جديدة
+    bindConditional('id_current_workplace', 'new-workplace-box', 'id_new_workplace_name',
+        function (c) { return c.value === '__other__'; });
+
+    // فئة الموظف → تواريخ العقد.
+    // موظف الخدمة المدنية لا عقد له، فيختفي التاريخان وتُفرَّغ قيمتهما.
+    var notCivilService = function (c) { return c.value !== 'خدمة مدنية'; };
+    bindConditional('id_employee_type', 'contract-start-box', 'id_contract_start_date', notCivilService);
+    bindConditional('id_employee_type', 'contract-end-box', 'id_contract_end_date', notCivilService);
+
+    // ولغير الخدمة المدنية تاريخ النهاية إلزامي. تُرفع صفة required
+    // عند الإخفاء، وإلا رفض المتصفح الإرسال بسبب حقل لا يراه المستخدم.
+    (function () {
+        var type = document.getElementById('id_employee_type');
+        var end  = document.getElementById('id_contract_end_date');
+        var star = document.getElementById('contract-end-required');
+        if (!type || !end) return;
+
+        function apply() {
+            var required = type.value !== '' && type.value !== 'خدمة مدنية';
+            end.required = required;
+            if (star) star.style.display = required ? '' : 'none';
+        }
+
+        apply();
+        type.addEventListener('change', apply);
+    })();
 });
 </script>
-{% block scripts %}{% endblock %}
-</body>
-</html>
+{% endblock %}
