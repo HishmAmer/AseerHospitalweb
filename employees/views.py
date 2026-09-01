@@ -156,7 +156,7 @@ def dashboard_view(request):
     expiring_soon_employees = base_employees.filter(
         status='نشط',
         contract_end_date__gte=today,
-        contract_end_date__lte=thirty_days_from_now,
+        contract_end_date__lte=ninety_days_from_now,
     ).order_by('contract_end_date')
 
     expired_classifications = base_employees.filter(
