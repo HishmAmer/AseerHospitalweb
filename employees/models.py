@@ -213,7 +213,7 @@ class Employee(models.Model):
     current_department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='القسم الذي يعمل به')
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='نشط', verbose_name='حالة الموظف')
-    employee_type = models.CharField(max_length=50, choices=EMPLOYEE_TYPE_CHOICES, null=True, blank=True, verbose_name='فئة الموظف')
+    employee_type = models.CharField(max_length=50, choices=EMPLOYEE_TYPE_CHOICES, null=True, blank=True, verbose_name='نوع الموظف')
     
     general_specialty = models.ForeignKey(GeneralSpecialty, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='التخصص العام')
     has_sub_specialty = models.CharField(max_length=10, choices=YES_NO_CHOICES, default='لا', verbose_name='هل يوجد تخصص دقيق؟')
