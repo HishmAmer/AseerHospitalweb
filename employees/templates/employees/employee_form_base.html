@@ -312,8 +312,6 @@ document.addEventListener("DOMContentLoaded", function () {
         function (c) { return c.checked; });
 
     // التصنيف المهني → رقم التصنيف وتاريخ انتهائه معاً
-    var isClassified = function (c) { return c.value === 'مصنف'; };
-    bindConditional('id_is_classified', 'class-number-box', 'id_classification_number', isClassified);
     // التصنيف المهني → رقم التصنيف وتاريخ انتهائه معاً
     var isClassified = function (c) { return c.value === 'مصنف'; };
     bindConditional('id_is_classified', 'class-number-box', 'id_classification_number', isClassified);
