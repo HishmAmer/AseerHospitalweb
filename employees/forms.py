@@ -233,6 +233,9 @@ class EmployeeForm(forms.ModelForm):
         # 2. التصنيف المهني: رقم التصنيف وتاريخ انتهائه يلزمان معاً للمصنَّف،
         #    ويُمحيان لغير المصنَّف حتى لا يبقى رقم تصنيف قديم في سجل من
         #    أُلغي تصنيفه.
+                # 2. التصنيف المهني: رقم التصنيف وتاريخ انتهائه يلزمان معاً للمصنَّف،
+        #    ويُمحيان لغير المصنَّف حتى لا يبقى رقم تصنيف قديم في سجل من
+        #    أُلغي تصنيفه.
         is_classified = cleaned_data.get('is_classified')
         classification_expiry_date = cleaned_data.get('classification_expiry_date')
         classification_number = (cleaned_data.get('classification_number') or '').strip()
