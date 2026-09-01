@@ -230,13 +230,32 @@ class EmployeeForm(forms.ModelForm):
                 'تاريخ نهاية العقد لا يمكن أن يكون قبل تاريخ البداية.',
             )
 
-        # 2. تحقق التصنيف المهني
+        # 2. التصنيف المهني: رقم التصنيف وتاريخ انتهائه يلزمان معاً للمصنَّف،
+        #    ويُمحيان لغير المصنَّف حتى لا يبقى رقم تصنيف قديم في سجل من
+        #    أُلغي تصنيفه.
+                # 2. التصنيف المهني: رقم التصنيف وتاريخ انتهائه يلزمان معاً للمصنَّف،
+        #    ويُمحيان لغير المصنَّف حتى لا يبقى رقم تصنيف قديم في سجل من
+        #    أُلغي تصنيفه.
         is_classified = cleaned_data.get('is_classified')
         classification_expiry_date = cleaned_data.get('classification_expiry_date')
-        if is_classified == 'مصنف' and not classification_expiry_date:
-            self.add_error('classification_expiry_date', 'يجب إدخال تاريخ انتهاء التصنيف بما أن الموظف (مصنف).')
+        classification_number = (cleaned_data.get('classification_number') or '').strip()
+
+        if is_classified == 'مصنف':
+            if not classification_number:
+                self.add_error(
+                    'classification_number',
+                    'يجب إدخال رقم التصنيف بما أن الموظف (مصنف).',
+                )
+            else:
+                cleaned_data['classification_number'] = classification_number
+            if not classification_expiry_date:
+                self.add_error(
+                    'classification_expiry_date',
+                    'يجب إدخال تاريخ انتهاء التصنيف بما أن الموظف (مصنف).',
+                )
         elif is_classified == 'غير مصنف':
             cleaned_data['classification_expiry_date'] = None
+            cleaned_data['classification_number'] = None
             
         # 3. تحقق نوع المنشأة
         workplace_type = cleaned_data.get('workplace_type')

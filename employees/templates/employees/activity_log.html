@@ -1,4 +1,5 @@
 {% extends 'employees/base.html' %}
+{% load arabic_time %}
 {% block title %}سجل النشاطات{% endblock %}
 {% block page_title %}سجل مراقبة النظام{% endblock %}
 
@@ -41,6 +42,7 @@
                     <th>المستخدم</th>
                     <th>الإجراء</th>
                     <th>التفاصيل</th>
+                    <th>منذ</th>
                     <th class="text-start">التاريخ والوقت</th>
                 </tr>
             </thead>
@@ -78,6 +80,10 @@
 
                     <td class="log-desc">{{ log.description }}</td>
 
+                    <td>
+                        <span class="badge-app badge-neutral">{{ log.timestamp|days_ago }}</span>
+                    </td>
+
                     <td class="log-time">
                         <div class="date">{{ log.timestamp|date:"Y/m/d" }}</div>
                         <div class="clock">{{ log.timestamp|time:"H:i" }}</div>
@@ -85,7 +91,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4">
+                    <td colspan="5">
                         <div class="empty-state">
                             <div class="tint tint-neutral"><i class="fas fa-wind"></i></div>
                             <h6>السجل فارغ</h6>
