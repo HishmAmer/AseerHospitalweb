@@ -1,4 +1,5 @@
 import re
+from datetime import date
 
 from django import forms
 from .models import Employee, Leave, Workplace, UserProfile
@@ -8,6 +9,31 @@ from django.core.exceptions import ValidationError
 
 OTHER_WORKPLACE = '__other__'
 OTHER_WORKPLACE_TYPE = '__other_type__'
+
+# العمر المقبول: أكبر من 20 عاماً، أي 21 سنة مكتملة فأكثر.
+# لتغيير الحدّ لاحقاً يكفي تعديل هذا الرقم وحده.
+MIN_AGE_YEARS = 21
+
+
+def years_since(day):
+    """العمر بالسنوات المكتملة — بالحساب نفسه في Employee.age."""
+    today = date.today()
+    return today.year - day.year - ((today.month, today.day) < (day.month, day.day))
+
+
+def latest_acceptable_dob():
+    """آخر تاريخ ميلاد يبلغ صاحبه الحدّ الأدنى للعمر اليوم.
+
+    date.replace(year=...) يرمي ValueError يوم 29 فبراير من سنة كبيسة لأن
+    السنة المقابلة قبل 21 عاماً ليست كبيسة، فتسقط صفحة إضافة موظف في ذلك
+    اليوم وحده. 28 فبراير هو التاريخ الصحيح حينها.
+    """
+    today = date.today()
+    try:
+        return today.replace(year=today.year - MIN_AGE_YEARS)
+    except ValueError:
+        return today.replace(year=today.year - MIN_AGE_YEARS, month=2, day=28)
+
 
 # القيمة كما تُخزَّن في قاعدة البيانات ضمن Employee.EMPLOYEE_TYPE_CHOICES.
 # موظفو الخدمة المدنية على بند التوظيف الحكومي فلا عقد لهم أصلاً.
@@ -81,6 +107,10 @@ class EmployeeForm(forms.ModelForm):
             else:
                 field.widget.attrs['class'] = 'form-control'
         
+        # أقصى تاريخ ميلاد مقبول، ليقصر منتقي التاريخ نفسه على المدى الصحيح.
+        # إرشاد للمستخدم لا تحقّق: النموذج يحمل novalidate، والفحص في clean_dob.
+        self.fields['dob'].widget.attrs['max'] = latest_acceptable_dob().isoformat()
+
         # نوع المنشأة: قائمة ثابتة يُضاف إليها «أخرى» لكتابة نوع غير مدرج.
         known_types = [(value, label) for value, label in Employee.WORKPLACE_TYPE_CHOICES]
         self.fields['workplace_type'] = forms.ChoiceField(
@@ -118,6 +148,25 @@ class EmployeeForm(forms.ModelForm):
             field.widget.choices = list(field.choices) + [
                 (OTHER_WORKPLACE, 'أخرى — منشأة غير مدرجة'),
             ]
+
+    def clean_dob(self):
+        """تاريخ الميلاد اختياري، لكنه إن وُجد فالعمر أكبر من 20 عاماً.
+
+        يُحسب بالطريقة نفسها في Employee.age حتى لا يقبل النموذج تاريخاً
+        يعرضه سجل الموظف بعد الحفظ بعمر مرفوض. التاريخ المستقبلي يعطي
+        عمراً سالباً فيسقط في الشرط نفسه.
+        """
+        dob = self.cleaned_data.get('dob')
+        if not dob:
+            return dob
+
+        age = years_since(dob)
+        if age < MIN_AGE_YEARS:
+            raise ValidationError(
+                f'يجب أن يكون عمر الموظف أكبر من {MIN_AGE_YEARS - 1} عاماً — '
+                f'العمر المحسوب من هذا التاريخ {age} عاماً.'
+            )
+        return dob
 
     def clean(self):
         cleaned_data = super().clean()
