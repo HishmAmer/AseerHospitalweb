@@ -229,7 +229,9 @@ def filtered_employees(request):
     if workplace_filter.isdigit() and request.user.is_superuser:
         employees = employees.filter(current_workplace__id=int(workplace_filter))
 
-    return employees.select_related('current_workplace', 'current_department').order_by('full_name')
+    return employees.select_related(
+        'current_workplace', 'current_department', 'general_specialty', 'sub_specialty'
+    ).order_by('full_name')
 
 
 @login_required(login_url='login')
@@ -309,8 +311,14 @@ def delete_employee(request, pk):
     return redirect('employee_list')
 
 def excel_safe(value):
-    """Neutralise spreadsheet formula injection in exported cells."""
-    if isinstance(value, str) and value[:1] in ('=', '+', '-', '@', '\t', '\r'):
+    """Neutralise spreadsheet formula injection in exported cells.
+
+    حرف واحد لا يكوّن صيغة في أي جدول، لذا يُستثنى: الشرطة التي نملأ بها
+    الخانات الفارغة كانت تخرج ‎'-‎ لأن الفاصلة العليا التي نكتبها برمجياً
+    يعرضها إكسل كما هي (علامة النص تُدخَل يدوياً فقط). كل حمولة حقن حقيقية
+    أطول من حرف، فالحماية باقية.
+    """
+    if isinstance(value, str) and len(value) > 1 and value[0] in ('=', '+', '-', '@', '\t', '\r'):
         return "'" + value
     return value
 
@@ -324,7 +332,8 @@ def export_employees_excel(request):
 
     ws.append([
         'الرقم الوظيفي', 'اسم الموظف', 'رقم الهوية', 'تاريخ الميلاد', 'العمر', 'الجنسية',
-        'نوع المنشأة', 'التفرغ', 'المنشأة الحالية', 'القسم', 'فئة الموظف (نوع العقد)',
+        'نوع المنشأة', 'التفرغ', 'المنشأة الحالية', 'القسم',
+        'التخصص العام', 'التخصص الدقيق', 'فئة الموظف (نوع العقد)',
         'فئة الكادر', 'المسمى الوظيفي', 'حالة الموظف',
         'تاريخ بداية العقد', 'تاريخ نهاية العقد', 'حالة التصنيف', 'تاريخ انتهاء التصنيف',
     ])
@@ -341,6 +350,8 @@ def export_employees_excel(request):
             emp.time_type or '-',
             emp.current_workplace.name if emp.current_workplace else '-',
             emp.current_department.name if emp.current_department else '-',
+            emp.general_specialty.name if emp.general_specialty else '-',
+            emp.sub_specialty.name if emp.sub_specialty else '-',
             emp.employee_type or '-',
             emp.employee_category or '-',
             emp.contract_job_title or '-',
@@ -533,9 +544,6 @@ def restore_employee(request, pk):
     # السبب يُفرَّغ حتى لا يُنسب سبب أرشفة قديم إلى أرشفة لاحقة؛
     # نصّه محفوظ في سجل النشاطات قبل المسح.
     previous_reason = emp.archive_reason
-        # السبب يُفرَّغ حتى لا يُنسب سبب أرشفة قديم إلى أرشفة لاحقة؛
-    # نصّه محفوظ في سجل النشاطات قبل المسح.
-    previous_reason = emp.archive_reason
     emp.is_deleted = False
     emp.archive_reason = None
     emp.save(update_fields=['is_deleted', 'archive_reason', 'updated_at'])
@@ -544,7 +552,6 @@ def restore_employee(request, pk):
         f'تم استعادة الموظف للعمل: {emp.full_name}'
         + (f' — سبب أرشفته كان: {previous_reason}' if previous_reason else ''),
     )
-   
     messages.success(request, f'تم استعادة الموظف {emp.full_name} وإعادته للسجل بنجاح!')
     return redirect('archived_employee_list')
 

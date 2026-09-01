@@ -227,6 +227,58 @@ class ExcelExportTests(SecurityTestCase):
         self.assertEqual(excel_safe('+1+1'), "'+1+1")
         self.assertEqual(excel_safe('محمد'), 'محمد')
         self.assertEqual(excel_safe(42), 42)
+        # حرف واحد ليس صيغة؛ الشرطة النائبة عن الخانة الفارغة تخرج كما هي.
+        self.assertEqual(excel_safe('-'), '-')
+        self.assertEqual(excel_safe('='), '=')
+        self.assertEqual(excel_safe('-1+1'), "'-1+1")
+
+    def test_export_includes_specialties(self):
+        """التخصص العام والدقيق عمودان في ملف التصدير."""
+        import io
+
+        import openpyxl
+
+        from .models import GeneralSpecialty, SubSpecialty
+
+        employee = Employee.objects.get(pk=self.own_employee.pk)
+        employee.general_specialty = GeneralSpecialty.objects.create(name='باطنة')
+        employee.has_sub_specialty = 'نعم'
+        employee.sub_specialty = SubSpecialty.objects.create(name='أمراض الكلى')
+        employee.save()
+
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        response = self.client.get(reverse('export_employees_excel'))
+        self.assertEqual(response.status_code, 200)
+
+        sheet = openpyxl.load_workbook(io.BytesIO(response.content)).active
+        header = [cell.value for cell in sheet[1]]
+        self.assertIn('التخصص العام', header)
+        self.assertIn('التخصص الدقيق', header)
+
+        row = next(
+            r for r in sheet.iter_rows(min_row=2, values_only=True)
+            if r[header.index('اسم الموظف')] == employee.full_name
+        )
+        self.assertEqual(row[header.index('التخصص العام')], 'باطنة')
+        self.assertEqual(row[header.index('التخصص الدقيق')], 'أمراض الكلى')
+
+    def test_export_shows_dash_when_no_specialty(self):
+        """موظف بلا تخصص يخرج بشرطة، لا بخلية فارغة أو خطأ."""
+        import io
+
+        import openpyxl
+
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        sheet = openpyxl.load_workbook(
+            io.BytesIO(self.client.get(reverse('export_employees_excel')).content)
+        ).active
+        header = [cell.value for cell in sheet[1]]
+        row = next(
+            r for r in sheet.iter_rows(min_row=2, values_only=True)
+            if r[header.index('اسم الموظف')] == self.own_employee.full_name
+        )
+        self.assertEqual(row[header.index('التخصص العام')], '-')
+        self.assertEqual(row[header.index('التخصص الدقيق')], '-')
 
 
 class HostConfigurationTests(SimpleTestCase):
