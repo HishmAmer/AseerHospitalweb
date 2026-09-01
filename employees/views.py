@@ -337,6 +337,7 @@ def export_employees_excel(request):
         'فئة الكادر', 'المسمى الوظيفي', 'حالة الموظف',
         'تاريخ بداية العقد', 'تاريخ نهاية العقد',
         'حالة التصنيف', 'رقم التصنيف', 'تاريخ انتهاء التصنيف',
+        'مكلف بعمل إداري',
     ])
 
     for emp in filtered_employees(request):
@@ -362,6 +363,7 @@ def export_employees_excel(request):
             emp.is_classified,
             emp.classification_number or '-',
             emp.classification_expiry_date.strftime('%Y-%m-%d') if emp.classification_expiry_date else '-',
+            'نعم' if emp.is_admin_assigned else 'لا',
         )])
 
     response = HttpResponse(

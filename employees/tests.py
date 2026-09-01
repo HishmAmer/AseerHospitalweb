@@ -291,6 +291,32 @@ class ExcelExportTests(SecurityTestCase):
             rows[self.own_employee.full_name][header.index('رقم التصنيف')], '-'
         )
 
+    def test_export_includes_admin_assignment(self):
+        """التكليف الإداري يخرج نعم/لا لا True/False."""
+        import io
+
+        import openpyxl
+
+        assigned = Employee.objects.create(
+            full_name='موظف مكلف', gender='F', current_workplace=self.hospital_a,
+            is_admin_assigned=True,
+        )
+
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        sheet = openpyxl.load_workbook(
+            io.BytesIO(self.client.get(reverse('export_employees_excel')).content)
+        ).active
+        header = [cell.value for cell in sheet[1]]
+        self.assertIn('مكلف بعمل إداري', header)
+
+        rows = {
+            r[header.index('اسم الموظف')]: r
+            for r in sheet.iter_rows(min_row=2, values_only=True)
+        }
+        column = header.index('مكلف بعمل إداري')
+        self.assertEqual(rows[assigned.full_name][column], 'نعم')
+        self.assertEqual(rows[self.own_employee.full_name][column], 'لا')
+
     def test_export_shows_dash_when_no_specialty(self):
         """موظف بلا تخصص يخرج بشرطة، لا بخلية فارغة أو خطأ."""
         import io
