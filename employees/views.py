@@ -336,7 +336,9 @@ def export_employees_excel(request):
         'التخصص العام', 'التخصص الدقيق', 'فئة الموظف (نوع العقد)',
         'فئة الكادر', 'المسمى الوظيفي', 'حالة الموظف',
         'تاريخ بداية العقد', 'تاريخ نهاية العقد',
-        'حالة التصنيف', 'رقم التصنيف', 'تاريخ انتهاء التصنيف',    ])
+        'حالة التصنيف', 'رقم التصنيف', 'تاريخ انتهاء التصنيف',
+        'مكلف بعمل إداري',
+    ])
 
     for emp in filtered_employees(request):
         ws.append([excel_safe(value) for value in (
@@ -361,7 +363,10 @@ def export_employees_excel(request):
             emp.is_classified,
             emp.classification_number or '-',
             emp.classification_expiry_date.strftime('%Y-%m-%d') if emp.classification_expiry_date else '-',
+                        emp.classification_expiry_date.strftime('%Y-%m-%d') if emp.classification_expiry_date else '-',
+            'نعم' if emp.is_admin_assigned else 'لا',
         )])
+       
 
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
