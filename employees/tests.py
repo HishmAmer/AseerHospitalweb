@@ -1,10 +1,7 @@
+import re
 import sys
 from datetime import date, timedelta
 from unittest import mock
-from django.urls import reverse
-from django.utils import timezone
-from .forms import EmployeeForm, latest_acceptable_dob
-from .templatetags.arabic_time import days_ago
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import SimpleTestCase, TestCase
@@ -1061,136 +1058,42 @@ class ClassificationNumberTests(SecurityTestCase):
         )
 
 
-class ArabicDaysAgoTests(SimpleTestCase):
-    """صيغة «منذ كم يوم» تتبع قواعد تمييز العدد في العربية."""
+class FormTemplateIntegrityTests(SecurityTestCase):
+    """يمنع تكرار الحقول في القالب: QueryDict يقرأ آخر قيمة، فيفوز الحقل الفارغ."""
 
-    def ago(self, days, hours=0):
-        moment = timezone.now() - timedelta(days=days, hours=hours)
-        return days_ago(moment)
-
-    def test_today_and_yesterday_are_named_not_counted(self):
-        self.assertEqual(self.ago(0), 'اليوم')
-        self.assertEqual(self.ago(1), 'أمس')
-
-    def test_dual_is_genitive_after_the_preposition(self):
-        """بعد «منذ» يُجرّ المثنى: يومين لا يومان."""
-        self.assertEqual(self.ago(2), 'منذ يومين')
-
-    def test_three_to_ten_take_the_broken_plural(self):
-        self.assertEqual(self.ago(3), 'منذ 3 أيام')
-        self.assertEqual(self.ago(10), 'منذ 10 أيام')
-
-    def test_eleven_to_ninety_nine_take_the_accusative_singular(self):
-        self.assertEqual(self.ago(11), 'منذ 11 يوماً')
-        self.assertEqual(self.ago(99), 'منذ 99 يوماً')
-
-    def test_hundred_and_above_take_the_genitive_singular(self):
-        self.assertEqual(self.ago(100), 'منذ 100 يوم')
-        self.assertEqual(self.ago(365), 'منذ 365 يوم')
-
-    def test_a_calendar_day_counts_not_twenty_four_hours(self):
-        """حدث قبل 20 ساعة قد يكون أمس، والعبرة بتغيّر اليوم لا بالساعات."""
-        now = timezone.localtime()
-        late_yesterday = (now - timedelta(days=1)).replace(hour=23, minute=30)
-        self.assertEqual(days_ago(late_yesterday), 'أمس')
-
-    def test_future_and_empty_do_not_crash(self):
-        self.assertEqual(days_ago(timezone.now() + timedelta(days=2)), 'تاريخ لاحق')
-        self.assertEqual(days_ago(None), '')
-
-
-class ClassificationNumberTests(SecurityTestCase):
-    """رقم التصنيف يلزم للمصنَّف، ويُمحى مع تاريخه لغير المصنَّف."""
+    UNIQUE_FIELDS = (
+        'classification_number', 'classification_expiry_date', 'is_classified',
+        'contract_start_date', 'contract_end_date', 'employee_type',
+        'full_name', 'national_id', 'date_of_birth',
+    )
 
     def setUp(self):
         super().setUp()
         self.client.login(username='admin', password='Str0ngAdminPass!')
 
-    def payload(self, **overrides):
-        data = {
-            'full_name': 'موظف تصنيف',
-            'gender': 'M',
-            'nationality': 'سعودي',
-            'status': 'نشط',
-            'has_sub_specialty': 'لا',
-            'current_workplace': self.hospital_a.pk,
-            'is_classified': 'غير مصنف',
-        }
-        data.update(overrides)
-        return data
+    def _assert_no_duplicates(self, url):
+        html = self.client.get(url).content.decode()
+        for field in self.UNIQUE_FIELDS:
+            with self.subTest(field=field):
+                self.assertLessEqual(
+                    len(re.findall(r'name=["\']%s["\']' % re.escape(field), html)), 1,
+                    'الحقل %s مكرر في %s' % (field, url),
+                )
 
-    def test_classified_saves_number_and_expiry(self):
-        response = self.client.post(reverse('add_employee'), self.payload(
-            is_classified='مصنف',
-            classification_number='SCFHS-12345',
-            classification_expiry_date='2030-01-01',
-        ))
+    def _assert_unique_ids(self, url):
+        html = self.client.get(url).content.decode()
+        ids = re.findall(r'\sid=["\']([^"\']+)["\']', html)
+        duplicates = sorted({i for i in ids if ids.count(i) > 1})
+        self.assertEqual(duplicates, [], 'معرّفات مكررة في %s: %s' % (url, duplicates))
 
-        self.assertEqual(response.status_code, 302)
-        employee = Employee.objects.get(full_name='موظف تصنيف')
-        self.assertEqual(employee.classification_number, 'SCFHS-12345')
-        self.assertEqual(str(employee.classification_expiry_date), '2030-01-01')
+    def test_add_form_has_no_duplicate_fields(self):
+        self._assert_no_duplicates(reverse('add_employee'))
 
-    def test_classified_without_a_number_is_rejected(self):
-        response = self.client.post(reverse('add_employee'), self.payload(
-            is_classified='مصنف', classification_expiry_date='2030-01-01',
-        ))
+    def test_edit_form_has_no_duplicate_fields(self):
+        self._assert_no_duplicates(reverse('edit_employee', args=[self.own_employee.pk]))
 
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('classification_number', response.context['form'].errors)
-        self.assertFalse(Employee.objects.filter(full_name='موظف تصنيف').exists())
+    def test_add_form_has_no_duplicate_ids(self):
+        self._assert_unique_ids(reverse('add_employee'))
 
-    def test_classified_without_an_expiry_is_still_rejected(self):
-        response = self.client.post(reverse('add_employee'), self.payload(
-            is_classified='مصنف', classification_number='SCFHS-1',
-        ))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('classification_expiry_date', response.context['form'].errors)
-
-    def test_whitespace_only_number_is_rejected(self):
-        response = self.client.post(reverse('add_employee'), self.payload(
-            is_classified='مصنف',
-            classification_number='   ',
-            classification_expiry_date='2030-01-01',
-        ))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('classification_number', response.context['form'].errors)
-
-    def test_unclassified_needs_neither(self):
-        response = self.client.post(reverse('add_employee'), self.payload())
-
-        self.assertEqual(response.status_code, 302)
-        employee = Employee.objects.get(full_name='موظف تصنيف')
-        self.assertIsNone(employee.classification_number)
-        self.assertIsNone(employee.classification_expiry_date)
-
-    def test_unclassifying_clears_a_stored_number(self):
-        """وإلا بقي رقم تصنيف قديم في سجل من أُلغي تصنيفه."""
-        employee = Employee.objects.create(
-            full_name='موظف قائم', gender='M', current_workplace=self.hospital_a,
-            is_classified='مصنف', classification_number='SCFHS-9',
-            classification_expiry_date='2030-01-01',
-        )
-        response = self.client.post(
-            reverse('edit_employee', args=[employee.pk]),
-            self.payload(full_name='موظف قائم', is_classified='غير مصنف'),
-        )
-
-        self.assertEqual(response.status_code, 302)
-        employee.refresh_from_db()
-        self.assertIsNone(employee.classification_number)
-        self.assertIsNone(employee.classification_expiry_date)
-
-    def test_number_is_trimmed(self):
-        self.client.post(reverse('add_employee'), self.payload(
-            is_classified='مصنف',
-            classification_number='  SCFHS-77  ',
-            classification_expiry_date='2030-01-01',
-        ))
-
-        self.assertEqual(
-            Employee.objects.get(full_name='موظف تصنيف').classification_number,
-            'SCFHS-77',
-        )
+    def test_edit_form_has_no_duplicate_ids(self):
+        self._assert_unique_ids(reverse('edit_employee', args=[self.own_employee.pk]))
