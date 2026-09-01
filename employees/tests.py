@@ -262,6 +262,35 @@ class ExcelExportTests(SecurityTestCase):
         self.assertEqual(row[header.index('التخصص العام')], 'باطنة')
         self.assertEqual(row[header.index('التخصص الدقيق')], 'أمراض الكلى')
 
+    def test_export_includes_classification_number(self):
+        """رقم التصنيف عمود في ملف التصدير، وشرطة لغير المصنَّف."""
+        import io
+
+        import openpyxl
+
+        classified = Employee.objects.create(
+            full_name='موظف مصنف', gender='M', current_workplace=self.hospital_a,
+            is_classified='مصنف', classification_number='SCFHS-4521',
+        )
+
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        sheet = openpyxl.load_workbook(
+            io.BytesIO(self.client.get(reverse('export_employees_excel')).content)
+        ).active
+        header = [cell.value for cell in sheet[1]]
+        self.assertIn('رقم التصنيف', header)
+
+        rows = {
+            r[header.index('اسم الموظف')]: r
+            for r in sheet.iter_rows(min_row=2, values_only=True)
+        }
+        self.assertEqual(
+            rows[classified.full_name][header.index('رقم التصنيف')], 'SCFHS-4521'
+        )
+        self.assertEqual(
+            rows[self.own_employee.full_name][header.index('رقم التصنيف')], '-'
+        )
+
     def test_export_shows_dash_when_no_specialty(self):
         """موظف بلا تخصص يخرج بشرطة، لا بخلية فارغة أو خطأ."""
         import io

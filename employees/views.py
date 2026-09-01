@@ -335,7 +335,8 @@ def export_employees_excel(request):
         'نوع المنشأة', 'التفرغ', 'المنشأة الحالية', 'القسم',
         'التخصص العام', 'التخصص الدقيق', 'فئة الموظف (نوع العقد)',
         'فئة الكادر', 'المسمى الوظيفي', 'حالة الموظف',
-        'تاريخ بداية العقد', 'تاريخ نهاية العقد', 'حالة التصنيف', 'تاريخ انتهاء التصنيف',
+        'تاريخ بداية العقد', 'تاريخ نهاية العقد',
+        'حالة التصنيف', 'رقم التصنيف', 'تاريخ انتهاء التصنيف',
     ])
 
     for emp in filtered_employees(request):
@@ -359,6 +360,7 @@ def export_employees_excel(request):
             emp.contract_start_date.strftime('%Y-%m-%d') if emp.contract_start_date else '-',
             emp.contract_end_date.strftime('%Y-%m-%d') if emp.contract_end_date else '-',
             emp.is_classified,
+            emp.classification_number or '-',
             emp.classification_expiry_date.strftime('%Y-%m-%d') if emp.classification_expiry_date else '-',
         )])
 
