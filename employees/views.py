@@ -31,19 +31,13 @@ from .models import (
     UserProfile,
     Workplace,
 )
-from datetime import date, datetime, timedelta
-from functools import wraps
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import LoginView, redirect_to_login
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
-
 SETTING_ITEM_MODELS = {
     'workplace': Workplace,
     'general_specialty': GeneralSpecialty,
     'sub_specialty': SubSpecialty,
     'department': Department,
 }
+
 
 def superuser_required(view):
     """يقصر العرض على مدير النظام.
@@ -53,17 +47,6 @@ def superuser_required(view):
     ينتج حلقة تحويل لا تنتهي بدل رفض واضح — على كل صفحات مدير النظام
     لا هذه وحدها. هنا يعود إلى لوحة القيادة برسالة يفهمها.
     """
-
-    @wraps(view)
-    def wrapper(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect_to_login(request.get_full_path(), reverse('login'))
-        if not request.user.is_superuser:
-            messages.error(request, 'هذه الصفحة متاحة لمدير النظام فقط.')
-            return redirect('dashboard')
-        return view(request, *args, **kwargs)
-
-    return wrapper
 
     @wraps(view)
     def wrapper(request, *args, **kwargs):
