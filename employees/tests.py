@@ -1,4 +1,5 @@
 import sys
+from datetime import date, timedelta
 from unittest import mock
 
 from django.contrib.auth.models import User
@@ -6,7 +7,7 @@ from django.core.cache import cache
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
-from .forms import EmployeeForm
+from .forms import EmployeeForm, latest_acceptable_dob
 from .models import ActivityLog, Employee, Leave, UserProfile, Workplace
 
 
@@ -818,3 +819,103 @@ class SuperuserRedirectTests(SecurityTestCase):
                 response = self.client.get(reverse(name))
                 self.assertEqual(response.status_code, 302)
                 self.assertTrue(response['Location'].startswith(reverse('login')))
+
+
+class MinimumAgeTests(SecurityTestCase):
+    """تاريخ الميلاد اختياري، لكنه إن وُجد فالعمر أكبر من 20 عاماً."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+
+    def payload(self, **overrides):
+        data = {
+            'full_name': 'موظف عمر',
+            'gender': 'M',
+            'nationality': 'سعودي',
+            'status': 'نشط',
+            'is_classified': 'غير مصنف',
+            'has_sub_specialty': 'لا',
+            'current_workplace': self.hospital_a.pk,
+        }
+        data.update(overrides)
+        return data
+
+    def dob_for_age(self, years, days_offset=0):
+        """تاريخ ميلاد يعطي هذا العمر بالضبط اليوم."""
+        today = date.today()
+        try:
+            born = today.replace(year=today.year - years)
+        except ValueError:                       # 29 فبراير
+            born = today.replace(year=today.year - years, month=2, day=28)
+        return (born + timedelta(days=days_offset)).isoformat()
+
+    def post(self, dob):
+        return self.client.post(reverse('add_employee'), self.payload(dob=dob))
+
+    def test_exactly_twenty_one_is_accepted(self):
+        response = self.post(self.dob_for_age(21))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Employee.objects.filter(full_name='موظف عمر').exists())
+
+    def test_comfortably_older_is_accepted(self):
+        response = self.post(self.dob_for_age(45))
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_exactly_twenty_is_rejected(self):
+        """المطلوب «أكبر من 20»، فالعشرون تماماً مرفوضة."""
+        response = self.post(self.dob_for_age(20))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('dob', response.context['form'].errors)
+        self.assertFalse(Employee.objects.filter(full_name='موظف عمر').exists())
+
+    def test_one_day_short_of_twenty_one_is_rejected(self):
+        """الحدّ يُحسب بالسنوات المكتملة، لا بفارق السنوات وحده."""
+        response = self.post(self.dob_for_age(21, days_offset=1))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('dob', response.context['form'].errors)
+
+    def test_child_is_rejected(self):
+        response = self.post(self.dob_for_age(8))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('dob', response.context['form'].errors)
+
+    def test_future_date_is_rejected(self):
+        """عمر سالب يسقط في الشرط نفسه بلا حاجة إلى فحص منفصل."""
+        response = self.post((date.today() + timedelta(days=30)).isoformat())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('dob', response.context['form'].errors)
+
+    def test_blank_date_is_still_allowed(self):
+        """الحقل اختياري في قاعدة البيانات، فلا يصير إلزامياً بهذا التحقق."""
+        response = self.client.post(reverse('add_employee'), self.payload())
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIsNone(Employee.objects.get(full_name='موظف عمر').dob)
+
+    def test_editing_an_underage_record_is_also_rejected(self):
+        employee = Employee.objects.create(
+            full_name='موظف قائم', gender='M', current_workplace=self.hospital_a
+        )
+        response = self.client.post(
+            reverse('edit_employee', args=[employee.pk]),
+            self.payload(full_name='موظف قائم', dob=self.dob_for_age(19)),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        employee.refresh_from_db()
+        self.assertIsNone(employee.dob)
+
+    def test_date_picker_is_capped_at_the_limit(self):
+        """إرشاد في المتصفح، والفحص الحقيقي على الخادم."""
+        form = EmployeeForm(user=self.admin)
+
+        self.assertEqual(
+            form.fields['dob'].widget.attrs['max'], latest_acceptable_dob().isoformat()
+        )
