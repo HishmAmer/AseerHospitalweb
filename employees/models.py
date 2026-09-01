@@ -220,6 +220,9 @@ class Employee(models.Model):
     sub_specialty = models.ForeignKey(SubSpecialty, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='التخصص الدقيق')
     
     is_classified = models.CharField(max_length=20, choices=CLASSIFICATION_CHOICES, default='غير مصنف', verbose_name='حالة التصنيف')
+    classification_number = models.CharField(
+        max_length=50, null=True, blank=True, verbose_name='رقم تصنيف الموظف'
+    )
     classification_expiry_date = models.DateField(verbose_name='تاريخ انتهاء التصنيف', null=True, blank=True, db_index=True)
 
     employee_category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, null=True, blank=True, verbose_name='فئة الموظف (الكادر)')

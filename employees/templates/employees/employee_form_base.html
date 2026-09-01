@@ -190,9 +190,18 @@
                     {{ form.is_classified }}
                 </div>
 
+                <div class="col-md-4 conditional-field" id="class-number-box" style="display:none;">
+                    <label class="form-label" for="{{ form.classification_number.id_for_label }}">
+                        {{ form.classification_number.label }}
+                        <span style="color:var(--danger);">*</span>
+                    </label>
+                    {{ form.classification_number }}
+                </div>
+
                 <div class="col-md-4 conditional-field" id="class-expiry-box" style="display:none;">
                     <label class="form-label" for="{{ form.classification_expiry_date.id_for_label }}">
                         {{ form.classification_expiry_date.label }}
+                        <span style="color:var(--danger);">*</span>
                     </label>
                     {{ form.classification_expiry_date }}
                 </div>
@@ -295,9 +304,10 @@ document.addEventListener("DOMContentLoaded", function () {
     bindConditional('id_is_admin_assigned', 'admin-details-box', 'id_admin_work_details',
         function (c) { return c.checked; });
 
-    // التصنيف المهني → تاريخ انتهاء التصنيف
-    bindConditional('id_is_classified', 'class-expiry-box', 'id_classification_expiry_date',
-        function (c) { return c.value === 'مصنف'; });
+    // التصنيف المهني → رقم التصنيف وتاريخ انتهائه معاً
+    var isClassified = function (c) { return c.value === 'مصنف'; };
+    bindConditional('id_is_classified', 'class-number-box', 'id_classification_number', isClassified);
+    bindConditional('id_is_classified', 'class-expiry-box', 'id_classification_expiry_date', isClassified);
 
     // نوع المنشأة → التفرّغ
     bindConditional('id_workplace_type', 'time-type-box', 'id_time_type',
