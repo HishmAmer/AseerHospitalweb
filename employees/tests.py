@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from .forms import EmployeeForm, latest_acceptable_dob
 from .templatetags.arabic_time import days_ago
-from .models import ActivityLog, Employee, Leave, UserProfile, Workplace
+from .models import ActivityLog, Employee, Leave, Nationality, UserProfile, Workplace
 
 
 class SecurityTestCase(TestCase):
@@ -23,6 +23,9 @@ class SecurityTestCase(TestCase):
             username='admin', password='Str0ngAdminPass!', is_superuser=True, is_staff=True
         )
         UserProfile.objects.create(user=self.admin, workplace=None)
+
+        # الجنسيات تُزرع في هجرة بيانات، فهي موجودة في قاعدة الاختبار.
+        self.saudi = Nationality.objects.get(name='سعودي')
 
         self.branch_user = User.objects.create_user(username='branch_a', password='Str0ngPass!2024')
         UserProfile.objects.create(user=self.branch_user, workplace=self.hospital_a)
@@ -227,6 +230,113 @@ class ExcelExportTests(SecurityTestCase):
         self.assertEqual(excel_safe('+1+1'), "'+1+1")
         self.assertEqual(excel_safe('محمد'), 'محمد')
         self.assertEqual(excel_safe(42), 42)
+        # حرف واحد ليس صيغة؛ الشرطة النائبة عن الخانة الفارغة تخرج كما هي.
+        self.assertEqual(excel_safe('-'), '-')
+        self.assertEqual(excel_safe('='), '=')
+        self.assertEqual(excel_safe('-1+1'), "'-1+1")
+
+    def test_export_includes_specialties(self):
+        """التخصص العام والدقيق عمودان في ملف التصدير."""
+        import io
+
+        import openpyxl
+
+        from .models import GeneralSpecialty, SubSpecialty
+
+        employee = Employee.objects.get(pk=self.own_employee.pk)
+        employee.general_specialty = GeneralSpecialty.objects.create(name='باطنة')
+        employee.has_sub_specialty = 'نعم'
+        employee.sub_specialty = SubSpecialty.objects.create(name='أمراض الكلى')
+        employee.save()
+
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        response = self.client.get(reverse('export_employees_excel'))
+        self.assertEqual(response.status_code, 200)
+
+        sheet = openpyxl.load_workbook(io.BytesIO(response.content)).active
+        header = [cell.value for cell in sheet[1]]
+        self.assertIn('التخصص العام', header)
+        self.assertIn('التخصص الدقيق', header)
+
+        row = next(
+            r for r in sheet.iter_rows(min_row=2, values_only=True)
+            if r[header.index('اسم الموظف')] == employee.full_name
+        )
+        self.assertEqual(row[header.index('التخصص العام')], 'باطنة')
+        self.assertEqual(row[header.index('التخصص الدقيق')], 'أمراض الكلى')
+
+    def test_export_includes_classification_number(self):
+        """رقم التصنيف عمود في ملف التصدير، وشرطة لغير المصنَّف."""
+        import io
+
+        import openpyxl
+
+        classified = Employee.objects.create(
+            full_name='موظف مصنف', gender='M', current_workplace=self.hospital_a,
+            is_classified='مصنف', classification_number='SCFHS-4521',
+        )
+
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        sheet = openpyxl.load_workbook(
+            io.BytesIO(self.client.get(reverse('export_employees_excel')).content)
+        ).active
+        header = [cell.value for cell in sheet[1]]
+        self.assertIn('رقم التصنيف', header)
+
+        rows = {
+            r[header.index('اسم الموظف')]: r
+            for r in sheet.iter_rows(min_row=2, values_only=True)
+        }
+        self.assertEqual(
+            rows[classified.full_name][header.index('رقم التصنيف')], 'SCFHS-4521'
+        )
+        self.assertEqual(
+            rows[self.own_employee.full_name][header.index('رقم التصنيف')], '-'
+        )
+
+    def test_export_includes_admin_assignment(self):
+        """التكليف الإداري يخرج نعم/لا لا True/False."""
+        import io
+
+        import openpyxl
+
+        assigned = Employee.objects.create(
+            full_name='موظف مكلف', gender='F', current_workplace=self.hospital_a,
+            is_admin_assigned=True,
+        )
+
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        sheet = openpyxl.load_workbook(
+            io.BytesIO(self.client.get(reverse('export_employees_excel')).content)
+        ).active
+        header = [cell.value for cell in sheet[1]]
+        self.assertIn('مكلف بعمل إداري', header)
+
+        rows = {
+            r[header.index('اسم الموظف')]: r
+            for r in sheet.iter_rows(min_row=2, values_only=True)
+        }
+        column = header.index('مكلف بعمل إداري')
+        self.assertEqual(rows[assigned.full_name][column], 'نعم')
+        self.assertEqual(rows[self.own_employee.full_name][column], 'لا')
+
+    def test_export_shows_dash_when_no_specialty(self):
+        """موظف بلا تخصص يخرج بشرطة، لا بخلية فارغة أو خطأ."""
+        import io
+
+        import openpyxl
+
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+        sheet = openpyxl.load_workbook(
+            io.BytesIO(self.client.get(reverse('export_employees_excel')).content)
+        ).active
+        header = [cell.value for cell in sheet[1]]
+        row = next(
+            r for r in sheet.iter_rows(min_row=2, values_only=True)
+            if r[header.index('اسم الموظف')] == self.own_employee.full_name
+        )
+        self.assertEqual(row[header.index('التخصص العام')], '-')
+        self.assertEqual(row[header.index('التخصص الدقيق')], '-')
 
 
 class HostConfigurationTests(SimpleTestCase):
@@ -431,7 +541,7 @@ class OtherWorkplaceTests(SecurityTestCase):
         payload = {
             'full_name': 'موظف جديد',
             'gender': 'M',
-            'nationality': 'سعودي',
+            'nationality': self.saudi.pk,
             'status': 'نشط',
             'is_classified': 'غير مصنف',
             'has_sub_specialty': 'لا',
@@ -528,7 +638,7 @@ class OtherWorkplaceTypeTests(SecurityTestCase):
         data = {
             'full_name': 'موظف نوع مخصص',
             'gender': 'M',
-            'nationality': 'سعودي',
+            'nationality': self.saudi.pk,
             'status': 'نشط',
             'is_classified': 'غير مصنف',
             'has_sub_specialty': 'لا',
@@ -619,7 +729,7 @@ class ContractDatesByEmployeeTypeTests(SecurityTestCase):
         data = {
             'full_name': 'موظف عقد',
             'gender': 'M',
-            'nationality': 'سعودي',
+            'nationality': self.saudi.pk,
             'status': 'نشط',
             'is_classified': 'غير مصنف',
             'has_sub_specialty': 'لا',
@@ -834,7 +944,7 @@ class MinimumAgeTests(SecurityTestCase):
         data = {
             'full_name': 'موظف عمر',
             'gender': 'M',
-            'nationality': 'سعودي',
+            'nationality': self.saudi.pk,
             'status': 'نشط',
             'is_classified': 'غير مصنف',
             'has_sub_specialty': 'لا',
@@ -972,7 +1082,7 @@ class ClassificationNumberTests(SecurityTestCase):
         data = {
             'full_name': 'موظف تصنيف',
             'gender': 'M',
-            'nationality': 'سعودي',
+            'nationality': self.saudi.pk,
             'status': 'نشط',
             'has_sub_specialty': 'لا',
             'current_workplace': self.hospital_a.pk,
@@ -1097,3 +1207,110 @@ class FormTemplateIntegrityTests(SecurityTestCase):
 
     def test_edit_form_has_no_duplicate_ids(self):
         self._assert_unique_ids(reverse('edit_employee', args=[self.own_employee.pk]))
+
+
+class NationalitySettingsTests(SecurityTestCase):
+    """الجنسيات صارت جدولاً مرجعياً يُدار من الإعدادات مثل المنشآت والأقسام."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+
+    def test_seed_list_is_present_and_ordered(self):
+        """هجرة البيانات تزرع القائمة القديمة كاملة، بترتيبها لا أبجدياً."""
+        self.assertGreaterEqual(Nationality.objects.count(), 190)
+        for name in ('سعودي', 'مصري', 'كوت ديفوار', 'بدون جنسية', 'أخرى'):
+            self.assertTrue(
+                Nationality.objects.filter(name=name).exists(), f'{name} مفقودة'
+            )
+        self.assertEqual(Nationality.objects.first().name, 'سعودي')
+
+    def test_appears_in_settings_page(self):
+        response = self.client.get(reverse('system_settings'))
+        self.assertContains(response, 'الجنسيات')
+        self.assertContains(response, 'nationalitySearch')
+
+    def test_admin_can_add_a_nationality(self):
+        self.client.post(reverse('add_setting_item', args=['nationality']), {'name': 'مالطي جديد'})
+        self.assertTrue(Nationality.objects.filter(name='مالطي جديد').exists())
+
+    def test_new_nationality_goes_to_the_end_not_the_top(self):
+        """وإلا قفزت الإضافات فوق «سعودي» في قائمة التسجيل."""
+        self.client.post(reverse('add_setting_item', args=['nationality']), {'name': 'جنسية حديثة'})
+        self.assertEqual(Nationality.objects.first().name, 'سعودي')
+        self.assertEqual(Nationality.objects.last().name, 'جنسية حديثة')
+
+    def test_branch_user_cannot_add_a_nationality(self):
+        self.client.logout()
+        self.client.login(username='branch_a', password='Str0ngPass!2024')
+        self.client.post(reverse('add_setting_item', args=['nationality']), {'name': 'جنسية مهرَّبة'})
+        self.assertFalse(Nationality.objects.filter(name='جنسية مهرَّبة').exists())
+
+    def test_unused_nationality_can_be_deleted(self):
+        spare = Nationality.objects.create(name='جنسية غير مستخدمة')
+        self.client.post(reverse('delete_setting_item', args=['nationality', spare.pk]))
+        self.assertFalse(Nationality.objects.filter(pk=spare.pk).exists())
+
+    def test_nationality_in_use_is_protected(self):
+        """PROTECT لا SET_NULL: الحذف يُرفض بدل أن يفرّغ الحقل في سجلات قائمة."""
+        used = Nationality.objects.create(name='جنسية مستخدمة')
+        employee = Employee.objects.create(
+            full_name='موظف مرتبط', gender='M',
+            current_workplace=self.hospital_a, nationality=used,
+        )
+
+        response = self.client.post(
+            reverse('delete_setting_item', args=['nationality', used.pk]), follow=True
+        )
+
+        self.assertTrue(Nationality.objects.filter(pk=used.pk).exists())
+        employee.refresh_from_db()
+        self.assertEqual(employee.nationality, used)
+        self.assertContains(response, 'مرتبط ببيانات موظفين')
+
+    def test_renaming_reaches_every_linked_employee(self):
+        """الفائدة الأساسية من الجدول: التصحيح الإملائي يسري على كل السجلات."""
+        nationality = Nationality.objects.create(name='جنسيه بخطأ')
+        employee = Employee.objects.create(
+            full_name='موظف', gender='F',
+            current_workplace=self.hospital_a, nationality=nationality,
+        )
+
+        nationality.name = 'جنسية صحيحة'
+        nationality.save()
+
+        employee.refresh_from_db()
+        self.assertEqual(employee.nationality.name, 'جنسية صحيحة')
+
+    def test_employee_form_saves_the_selected_nationality(self):
+        egyptian = Nationality.objects.get(name='مصري')
+        self.client.post(reverse('add_employee'), {
+            'full_name': 'موظف جنسية', 'gender': 'M', 'status': 'نشط',
+            'nationality': egyptian.pk, 'has_sub_specialty': 'لا',
+            'is_classified': 'غير مصنف', 'employee_type': 'خدمة مدنية',
+            'current_workplace': self.hospital_a.pk,
+            'dob': (date.today() - timedelta(days=365 * 30)).isoformat(),
+        })
+        self.assertEqual(
+            Employee.objects.get(full_name='موظف جنسية').nationality, egyptian
+        )
+
+    def test_export_writes_the_nationality_name(self):
+        """الحقل صار مفتاحاً خارجياً، فلا يجوز أن يخرج كرقم في ملف Excel."""
+        import io
+
+        import openpyxl
+
+        employee = Employee.objects.get(pk=self.own_employee.pk)
+        employee.nationality = Nationality.objects.get(name='مصري')
+        employee.save()
+
+        sheet = openpyxl.load_workbook(
+            io.BytesIO(self.client.get(reverse('export_employees_excel')).content)
+        ).active
+        header = [cell.value for cell in sheet[1]]
+        row = next(
+            r for r in sheet.iter_rows(min_row=2, values_only=True)
+            if r[header.index('اسم الموظف')] == employee.full_name
+        )
+        self.assertEqual(row[header.index('الجنسية')], 'مصري')

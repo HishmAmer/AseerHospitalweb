@@ -214,7 +214,7 @@ def employee_snapshot(employee):
         'employee_number': employee.employee_number or None,
         'national_id': employee.national_id or None,
         'dob': employee.dob,
-        'nationality': employee.nationality or None,
+        'nationality': employee.nationality.name if employee.nationality else None,
         'workplace_type': employee.workplace_type or None,
         'time_type': employee.time_type or None,
         'current_workplace': employee.current_workplace.name if employee.current_workplace else None,

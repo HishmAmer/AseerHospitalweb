@@ -28,6 +28,9 @@
         display: flex; justify-content: space-between; align-items: center; gap: 10px;
         transition: background-color .14s ease;
     }
+    /* display:flex أعلى أسبقيةً من قاعدة [hidden] في متصفّح المستخدم، فبدون
+       هذا السطر يبقى العنصر ظاهراً رغم إخفائه من البحث. */
+    .ref-item[hidden] { display: none !important; }
     .ref-item:last-child { border-bottom: none; }
     .ref-item:hover { background: var(--surface-sunken); }
     .ref-item .name { font-size: .875rem; font-weight: 600; color: var(--text); }
@@ -42,6 +45,28 @@
         padding: 28px 18px; text-align: center;
         color: var(--text-faint); font-size: .8125rem; font-weight: 600;
     }
+
+    /* الجنسيات وحدها بالمئات، فتأخذ عرض صفّ كامل وحقل بحث بدل تمرير طويل. */
+    .ref-panel-wide .ref-list { max-height: 340px; }
+    .ref-search {
+        margin: 0; padding: 10px 16px; border-bottom: 1px solid var(--border);
+    }
+    .ref-search input {
+        width: 100%; font-size: .8125rem; padding: 7px 12px;
+        border: 1px solid var(--border); border-radius: var(--r-pill);
+        background: var(--surface-sunken); color: var(--text);
+    }
+    .ref-search input:focus {
+        outline: none; border-color: var(--brand); background: var(--surface);
+    }
+    /* لا تعتمد على visually-hidden من Bootstrap: الصفحة تُحمّله من CDN،
+       وعلى شبكة داخلية بلا إنترنت يظهر النص فوق الحقل. */
+    .ref-search label {
+        position: absolute; width: 1px; height: 1px; overflow: hidden;
+        clip-path: inset(50%); white-space: nowrap;
+    }
+    .ref-noresult { padding: 22px 18px; text-align: center;
+        color: var(--text-faint); font-size: .8125rem; font-weight: 600; }
 
     .ref-count {
         font-size: .75rem; font-weight: 700; color: var(--text-faint);
@@ -187,6 +212,47 @@
         </div>
     </div>
 
+    <!-- ============ الجنسيات ============ -->
+    <div class="col-12">
+        <div class="panel ref-panel ref-panel-wide">
+            <div class="panel-header">
+                <h2 class="panel-title">
+                    <span class="tint tint-brand"><i class="fas fa-passport"></i></span>
+                    الجنسيات
+                    <span class="ref-count">({{ nationalities|length }})</span>
+                </h2>
+                <button type="button" class="btn-app btn-outline-app btn-add-ref"
+                        onclick="openAddModal('nationality', 'إضافة جنسية جديدة')"
+                        title="إضافة جنسية" aria-label="إضافة جنسية">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+            <div class="ref-search">
+                <label for="nationalitySearch">ابحث في الجنسيات</label>
+                <input type="search" id="nationalitySearch" autocomplete="off"
+                       placeholder="ابحث في الجنسيات…">
+            </div>
+            <ul class="ref-list" id="nationalityList">
+                {% for item in nationalities %}
+                <li class="ref-item" data-name="{{ item.name }}">
+                    <span class="name">{{ item.name }}</span>
+                    <form method="POST" action="{% url 'delete_setting_item' 'nationality' item.pk %}"
+                          onsubmit="return confirm('تأكيد حذف «{{ item.name|escapejs }}»؟');">
+                        {% csrf_token %}
+                        <button type="submit" class="action-circle action-circle-danger"
+                                title="حذف" aria-label="حذف {{ item.name }}">
+                            <i class="fas fa-trash-can"></i>
+                        </button>
+                    </form>
+                </li>
+                {% empty %}
+                <li class="ref-empty">لا توجد بيانات</li>
+                {% endfor %}
+                <li class="ref-noresult" id="nationalityNoResult" hidden>لا توجد جنسية بهذا الاسم</li>
+            </ul>
+        </div>
+    </div>
+
 </div>
 
 <!-- ============ نافذة الإضافة ============ -->
@@ -241,6 +307,23 @@
 
     // التركيز على الحقل بعد اكتمال حركة الفتح
     modalEl.addEventListener('shown.bs.modal', function () { input.focus(); });
+
+    // تصفية الجنسيات: القائمة بالمئات، فالتمرير وحده لا يكفي للوصول إلى واحدة.
+    var search = document.getElementById('nationalitySearch');
+    var list = document.getElementById('nationalityList');
+    var noResult = document.getElementById('nationalityNoResult');
+    if (search && list) {
+        search.addEventListener('input', function () {
+            var term = search.value.trim();
+            var shown = 0;
+            list.querySelectorAll('.ref-item').forEach(function (item) {
+                var match = !term || item.dataset.name.indexOf(term) !== -1;
+                item.hidden = !match;
+                if (match) { shown++; }
+            });
+            if (noResult) { noResult.hidden = shown !== 0; }
+        });
+    }
 })();
 </script>
 {% endblock %}

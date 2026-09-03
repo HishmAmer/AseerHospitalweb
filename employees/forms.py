@@ -2,7 +2,7 @@ import re
 from datetime import date
 
 from django import forms
-from .models import Employee, Leave, Workplace, UserProfile
+from .models import Employee, Leave, Nationality, Workplace, UserProfile
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
@@ -110,6 +110,15 @@ class EmployeeForm(forms.ModelForm):
         # أقصى تاريخ ميلاد مقبول، ليقصر منتقي التاريخ نفسه على المدى الصحيح.
         # إرشاد للمستخدم لا تحقّق: النموذج يحمل novalidate، والفحص في clean_dob.
         self.fields['dob'].widget.attrs['max'] = latest_acceptable_dob().isoformat()
+
+        # الجنسية صارت جدولاً يُدار من الإعدادات بدل قائمة ثابتة في الشيفرة.
+        # «سعودي» تُقترح مبدئياً في التسجيل الجديد كما كان الحقل النصي يفعل،
+        # وتبقى قابلة للتغيير. لا تُقترح عند التعديل حتى لا تُغيَّر قيمة قائمة.
+        self.fields['nationality'].empty_label = '— اختر الجنسية —'
+        if self.instance.pk is None and not self.initial.get('nationality'):
+            default_nationality = Nationality.objects.filter(name='سعودي').first()
+            if default_nationality is not None:
+                self.initial['nationality'] = default_nationality.pk
 
         # نوع المنشأة: قائمة ثابتة يُضاف إليها «أخرى» لكتابة نوع غير مدرج.
         known_types = [(value, label) for value, label in Employee.WORKPLACE_TYPE_CHOICES]
