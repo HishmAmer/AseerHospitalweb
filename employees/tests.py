@@ -10,7 +10,10 @@ from django.utils import timezone
 
 from .forms import EmployeeForm, latest_acceptable_dob
 from .templatetags.arabic_time import days_ago
-from .models import ActivityLog, Employee, Leave, Nationality, UserProfile, Workplace
+from .models import (
+    ActivityLog, Department, Employee, GeneralSpecialty, Leave, Nationality,
+    UserProfile, Workplace,
+)
 
 
 class SecurityTestCase(TestCase):
@@ -1314,3 +1317,54 @@ class NationalitySettingsTests(SecurityTestCase):
             if r[header.index('اسم الموظف')] == employee.full_name
         )
         self.assertEqual(row[header.index('الجنسية')], 'مصري')
+
+
+class ReferenceDataProtectionTests(SecurityTestCase):
+    """حذف عنصر مرجعي مستخدَم يُرفض بدل أن يمحوه من سجلات الموظفين بصمت."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username='admin', password='Str0ngAdminPass!')
+
+    def test_workplace_in_use_is_protected(self):
+        response = self.client.post(
+            reverse('delete_setting_item', args=['workplace', self.hospital_a.pk]), follow=True
+        )
+
+        self.assertTrue(Workplace.objects.filter(pk=self.hospital_a.pk).exists())
+        self.own_employee.refresh_from_db()
+        self.assertEqual(self.own_employee.current_workplace, self.hospital_a)
+        self.assertContains(response, 'مرتبط ببيانات موظفين')
+
+    def test_department_in_use_is_protected(self):
+        department = Department.objects.create(name='قسم الباطنة')
+        self.own_employee.current_department = department
+        self.own_employee.save()
+
+        self.client.post(reverse('delete_setting_item', args=['department', department.pk]))
+
+        self.assertTrue(Department.objects.filter(pk=department.pk).exists())
+        self.own_employee.refresh_from_db()
+        self.assertEqual(self.own_employee.current_department, department)
+
+    def test_specialty_in_use_is_protected(self):
+        specialty = GeneralSpecialty.objects.create(name='جراحة')
+        self.own_employee.general_specialty = specialty
+        self.own_employee.save()
+
+        self.client.post(
+            reverse('delete_setting_item', args=['general_specialty', specialty.pk])
+        )
+
+        self.assertTrue(GeneralSpecialty.objects.filter(pk=specialty.pk).exists())
+
+    def test_workplace_bound_to_an_account_is_protected(self):
+        """حذفها كان يفرّغ ربط الحساب، فيرى مستخدم الفرع قائمة فارغة بلا سبب."""
+        self.client.post(reverse('delete_setting_item', args=['workplace', self.hospital_b.pk]))
+
+        self.assertTrue(Workplace.objects.filter(pk=self.hospital_b.pk).exists())
+
+    def test_unused_reference_item_still_deletes(self):
+        spare = Department.objects.create(name='قسم بلا موظفين')
+        self.client.post(reverse('delete_setting_item', args=['department', spare.pk]))
+        self.assertFalse(Department.objects.filter(pk=spare.pk).exists())

@@ -52,7 +52,7 @@ class Nationality(models.Model):
 # ==========================================
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', verbose_name='المستخدم')
-    workplace = models.ForeignKey(Workplace, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='المنشأة التابع لها')
+    workplace = models.ForeignKey(Workplace, on_delete=models.PROTECT, null=True, blank=True, verbose_name='المنشأة التابع لها')
 
     def clean(self):
         super().clean()
@@ -142,15 +142,18 @@ class Employee(models.Model):
     # الاختيار في النموذج، والتحقق يتم هناك.
     workplace_type = models.CharField(max_length=50, null=True, blank=True, verbose_name='نوع المنشأة')
     time_type = models.CharField(max_length=20, choices=TIME_TYPE_CHOICES, null=True, blank=True, verbose_name='التفرغ')
-    current_workplace = models.ForeignKey(Workplace, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='المنشأة الحالية')
-    current_department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='القسم الذي يعمل به')
+    # PROTECT في كل الحقول المرجعية: SET_NULL كان يمحو المنشأة أو القسم أو
+    # التخصص من سجلات الموظفين بصمت عند حذف العنصر من الإعدادات، فيختفي
+    # الموظف عن حساب فرعه بلا أثر. الحذف الآن يُرفض برسالة يفهمها المستخدم.
+    current_workplace = models.ForeignKey(Workplace, on_delete=models.PROTECT, null=True, blank=True, verbose_name='المنشأة الحالية')
+    current_department = models.ForeignKey(Department, on_delete=models.PROTECT, null=True, blank=True, verbose_name='القسم الذي يعمل به')
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='نشط', verbose_name='حالة الموظف')
     employee_type = models.CharField(max_length=50, choices=EMPLOYEE_TYPE_CHOICES, null=True, blank=True, verbose_name='نوع الموظف')
     
-    general_specialty = models.ForeignKey(GeneralSpecialty, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='التخصص العام')
+    general_specialty = models.ForeignKey(GeneralSpecialty, on_delete=models.PROTECT, null=True, blank=True, verbose_name='التخصص العام')
     has_sub_specialty = models.CharField(max_length=10, choices=YES_NO_CHOICES, default='لا', verbose_name='هل يوجد تخصص دقيق؟')
-    sub_specialty = models.ForeignKey(SubSpecialty, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='التخصص الدقيق')
+    sub_specialty = models.ForeignKey(SubSpecialty, on_delete=models.PROTECT, null=True, blank=True, verbose_name='التخصص الدقيق')
     
     is_classified = models.CharField(max_length=20, choices=CLASSIFICATION_CHOICES, default='غير مصنف', verbose_name='حالة التصنيف')
     classification_number = models.CharField(
