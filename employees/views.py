@@ -27,6 +27,7 @@ from .models import (
     Employee,
     GeneralSpecialty,
     Leave,
+    Nationality,
     SubSpecialty,
     UserProfile,
     Workplace,
@@ -36,6 +37,7 @@ SETTING_ITEM_MODELS = {
     'general_specialty': GeneralSpecialty,
     'sub_specialty': SubSpecialty,
     'department': Department,
+    'nationality': Nationality,
 }
 
 
@@ -230,7 +232,8 @@ def filtered_employees(request):
         employees = employees.filter(current_workplace__id=int(workplace_filter))
 
     return employees.select_related(
-        'current_workplace', 'current_department', 'general_specialty', 'sub_specialty'
+        'current_workplace', 'current_department',
+        'general_specialty', 'sub_specialty', 'nationality',
     ).order_by('full_name')
 
 
@@ -347,7 +350,7 @@ def export_employees_excel(request):
             emp.national_id or '-',
             emp.dob.strftime('%Y-%m-%d') if emp.dob else '-',
             emp.age if emp.age is not None else '-',
-            emp.nationality or '-',
+            emp.nationality.name if emp.nationality else '-',
             emp.workplace_type or '-',
             emp.time_type or '-',
             emp.current_workplace.name if emp.current_workplace else '-',
@@ -713,6 +716,7 @@ def system_settings(request):
         'departments': Department.objects.all(),
         'general_specialties': GeneralSpecialty.objects.all(),
         'sub_specialties': SubSpecialty.objects.all(),
+        'nationalities': Nationality.objects.all(),
     }
     return render(request, 'employees/settings.html', context)
 
