@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <?!= include('Styles'); ?>
+</head>
+<body>
+<div style="min-height:100vh;display:grid;place-items:center;padding:24px">
+  <div class="panel" style="max-width:520px;margin:0">
+    <div class="panel-header">
+      <h2 class="panel-title"><span class="tint tint-danger">⚠</span> الدخول غير مصرَّح به</h2>
+    </div>
+    <div class="panel-body">
+      <p style="margin-top:0">
+        حسابك <strong><?= currentEmail() || 'غير معروف' ?></strong> غير مسجَّل في النظام.
+      </p>
+      <p style="color:var(--muted);font-size:.88rem">
+        راجع مدير النظام لإضافة بريدك من صفحة الصلاحيات. إن كنت تملك أكثر من حساب
+        Google، تأكد أنك داخل بالحساب الصحيح.
+      </p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

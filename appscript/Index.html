@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <?!= include('Styles'); ?>
+</head>
+<body>
+
+<div id="toasts" aria-live="polite"></div>
+
+<div class="app">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="mark">ع</div>
+      <div>
+        <h1>تجمع عسير الصحي</h1>
+        <p>إدارة المستشفيات والمراكز المتخصصة</p>
+      </div>
+    </div>
+
+    <nav class="nav" id="nav">
+      <div class="nav-group">الرئيسية</div>
+      <a data-page="dashboard" class="active"><span class="ico">◧</span> لوحة القيادة</a>
+
+      <div class="nav-group">إدارة الكادر</div>
+      <a data-page="employees"><span class="ico">☰</span> سجل الموظفين</a>
+      <a data-page="employee-form"><span class="ico">＋</span> إضافة موظف</a>
+      <a data-page="leaves"><span class="ico">◷</span> الإجازات</a>
+      <a data-page="archive"><span class="ico">⌸</span> الأرشيف</a>
+
+      <div class="nav-group" data-admin>إدارة النظام</div>
+      <a data-page="users" data-admin><span class="ico">⚿</span> الصلاحيات</a>
+      <a data-page="reconcile" data-admin><span class="ico">⇄</span> مطابقة ملف Excel</a>
+      <a data-page="settings" data-admin><span class="ico">⚙</span> إعدادات النظام</a>
+      <a data-page="activity" data-admin><span class="ico">↺</span> سجل النشاطات</a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div id="footScope">—</div>
+      <div style="margin-top:6px"><a id="sheetLink" style="color:#8FA79E;cursor:pointer" hidden>فتح جدول البيانات ↗</a></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0">
+        <button class="icon-btn menu-btn" id="menuBtn" aria-label="القائمة">☰</button>
+        <h2 id="pageTitle">لوحة القيادة</h2>
+      </div>
+      <div class="who">
+        <span id="userName">—</span>
+        <div class="avatar" id="userAvatar">؟</div>
+      </div>
+    </header>
+
+    <main class="content" id="view">
+      <div class="loading"><div class="spinner"></div>جارٍ تحميل النظام…</div>
+    </main>
+  </div>
+</div>
+
+<script>
+  var BOOT_USER = <?!= bootUser ?>;
+</script>
+<?!= include('JavaScript'); ?>
+</body>
+</html>

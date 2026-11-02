@@ -1,0 +1,1019 @@
+<script>
+/* ══════════════════════════════════════════════════════════════
+   نظام إدارة الكادر الطبي — منطق الواجهة
+   صفحة واحدة بلا إعادة تحميل: كل طلب إلى الخادم يكلّف من حصة
+   التنفيذ اليومية في Apps Script، فيُقلَّل عددها ما أمكن.
+   ══════════════════════════════════════════════════════════════ */
+
+var REF = null;     // القوائم المرجعية
+var ME = BOOT_USER; // هوية المستخدم
+var STATE = { page: 'dashboard', employeeId: null, leaveId: null, filters: {} };
+
+/* ───────────── أدوات ───────────── */
+
+/** استدعاء الخادم كوعد. */
+function call(fnName) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  return new Promise(function (resolve, reject) {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(function (err) { reject(new Error(err.message || String(err))); })
+      [fnName].apply(null, args);
+  });
+}
+
+/** تهريب النص قبل حقنه في HTML. كل بيانات المستخدمين تمرّ من هنا. */
+function esc(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function toast(message, kind) {
+  var box = document.getElementById('toasts');
+  var el = document.createElement('div');
+  el.className = 'toast toast-' + (kind || 'info');
+  el.textContent = message;
+  box.appendChild(el);
+  setTimeout(function () { el.remove(); }, kind === 'error' ? 9000 : 4500);
+}
+
+function fail(err) {
+  console.error(err);
+  toast(err.message || 'حدث خطأ غير متوقع.', 'error');
+}
+
+function busy(message) {
+  document.getElementById('view').innerHTML =
+    '<div class="loading"><div class="spinner"></div>' + esc(message || 'جارٍ التحميل…') + '</div>';
+}
+
+function render(html) { document.getElementById('view').innerHTML = html; }
+
+function option(value, label, selected) {
+  return '<option value="' + esc(value) + '"' +
+    (String(selected) === String(value) ? ' selected' : '') + '>' + esc(label) + '</option>';
+}
+
+function selectHtml(id, items, selected, placeholder) {
+  var html = '<select id="' + id + '">';
+  if (placeholder !== null) html += '<option value="">' + esc(placeholder || '— اختر —') + '</option>';
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    if (it && typeof it === 'object') html += option(it.value, it.label, selected);
+    else html += option(it, it, selected);
+  }
+  return html + '</select>';
+}
+
+function val(id) {
+  var el = document.getElementById(id);
+  if (!el) return '';
+  return el.type === 'checkbox' ? el.checked : String(el.value || '').trim();
+}
+
+/** ينزّل ملفاً أعاده الخادم بترميز base64. */
+function downloadFile(payload) {
+  var binary = atob(payload.bytes);
+  var bytes = new Uint8Array(binary.length);
+  for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  var url = URL.createObjectURL(new Blob([bytes], { type: payload.mimeType }));
+  var a = document.createElement('a');
+  a.href = url; a.download = payload.fileName;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+}
+
+/* ───────────── النافذة ───────────── */
+
+function modal(title, bodyHtml, confirmLabel, onConfirm, danger) {
+  var back = document.createElement('div');
+  back.className = 'modal-back';
+  back.innerHTML =
+    '<div class="modal" role="dialog" aria-modal="true">' +
+      '<div class="modal-head">' + esc(title) + '</div>' +
+      '<div class="modal-body">' + bodyHtml + '</div>' +
+      '<div class="modal-foot">' +
+        '<button class="btn ' + (danger ? 'btn-danger' : 'btn-primary') + '" id="mkOk">' + esc(confirmLabel) + '</button>' +
+        '<button class="btn btn-ghost" id="mkCancel">إلغاء</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(back);
+
+  function close() { back.remove(); }
+  back.addEventListener('click', function (e) { if (e.target === back) close(); });
+  document.getElementById('mkCancel').onclick = close;
+  document.getElementById('mkOk').onclick = function () {
+    var ok = onConfirm(close);
+    if (ok !== false) { /* onConfirm يغلق بنفسه عند النجاح */ }
+  };
+  var first = back.querySelector('input, textarea, select');
+  if (first) first.focus();
+  return close;
+}
+
+function confirmDanger(title, message, confirmLabel, action) {
+  modal(title, '<p style="margin:0">' + esc(message) + '</p>', confirmLabel, function (close) {
+    action();
+    close();
+  }, true);
+}
+
+/* ───────────── التوجيه ───────────── */
+
+var PAGES = {
+  'dashboard':     { title: 'نظرة عامة ومؤشرات الأداء', render: pageDashboard },
+  'employees':     { title: 'سجل الموظفين',             render: pageEmployees },
+  'employee-form': { title: 'بيانات الموظف',            render: pageEmployeeForm },
+  'leaves':        { title: 'الإجازات',                 render: pageLeaves },
+  'leave-form':    { title: 'بيانات الإجازة',           render: pageLeaveForm },
+  'archive':       { title: 'أرشيف الموظفين',           render: pageArchive },
+  'users':         { title: 'الصلاحيات والمستخدمون',    render: pageUsers, admin: true },
+  'reconcile':     { title: 'مطابقة ملف Excel',         render: pageReconcile, admin: true },
+  'settings':      { title: 'إعدادات النظام',           render: pageSettings, admin: true },
+  'activity':      { title: 'سجل النشاطات',             render: pageActivity, admin: true }
+};
+
+function go(page, params) {
+  var def = PAGES[page];
+  if (!def) return;
+  if (def.admin && !ME.isAdmin) { toast('هذه الصفحة متاحة لمدير النظام فقط.', 'error'); return; }
+
+  STATE.page = page;
+  STATE.employeeId = params && 'employeeId' in params ? params.employeeId : null;
+  STATE.leaveId = params && 'leaveId' in params ? params.leaveId : null;
+
+  document.getElementById('pageTitle').textContent = def.title;
+  var links = document.querySelectorAll('#nav a');
+  for (var i = 0; i < links.length; i++) {
+    links[i].classList.toggle('active', links[i].dataset.page === page);
+  }
+  document.getElementById('sidebar').classList.remove('open');
+  window.scrollTo(0, 0);
+
+  try { def.render(); } catch (err) { fail(err); }
+}
+
+/* ══════════════ لوحة القيادة ══════════════ */
+
+function pageDashboard() {
+  busy('جارٍ حساب المؤشرات…');
+  call('apiDashboard').then(function (d) {
+    var c = d.counts;
+    var html = '';
+
+    html += '<div class="panel" style="background:linear-gradient(135deg,#0C1A16,#16624F);border:none;color:#fff">' +
+      '<div class="panel-body" style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">' +
+        '<div><div style="font-size:1.15rem;font-weight:700">مرحباً، ' + esc(d.user.name) + '</div>' +
+        '<div style="opacity:.82;font-size:.86rem;margin-top:2px">نظرة عامة على مؤشرات الكادر ضمن نطاق صلاحيتك.</div></div>' +
+        '<div class="badge" style="background:rgba(255,255,255,.16);color:#fff;padding:6px 14px">' + esc(d.scope) + '</div>' +
+      '</div></div>';
+
+    html += '<div class="stats">' +
+      stat(c.active, 'إجمالي النشطين') +
+      stat(c.male, 'ذكور (نشط)') +
+      stat(c.female, 'إناث (نشط)') +
+      stat(d.onLeave, 'في إجازة حالياً') +
+    '</div>';
+
+    html += '<div class="stats">' +
+      stat(c.consultant, 'استشاري') +
+      stat(c.seniorRegistrar, 'نائب أول') +
+      stat(c.registrar, 'طبيب نائب') +
+      stat(c.resident, 'طبيب مقيم') +
+    '</div>';
+
+    var a = d.alerts;
+    var cards = [
+      alertCard('عقود منتهية', a.expiredContracts, 'expired', 'تاريخ الانتهاء'),
+      alertCard('عقود تنتهي خلال ' + a.contractDays + ' يوماً', a.expiringContracts, 'soon', 'تاريخ الانتهاء'),
+      alertCard('تصنيفات منتهية', a.expiredClassifications, 'expired', 'انتهاء التصنيف'),
+      alertCard('تصنيفات تنتهي خلال ' + a.classificationDays + ' يوماً', a.expiringClassifications, 'soon', 'انتهاء التصنيف')
+    ].filter(Boolean);
+
+    if (cards.length) {
+      html += '<div class="panel-header" style="border:none;padding:4px 2px 10px">' +
+        '<h2 class="panel-title"><span class="tint tint-warn">⚠</span> يستحق المتابعة</h2></div>';
+      html += '<div class="alerts">' + cards.join('') + '</div>';
+    } else {
+      html += '<div class="panel"><div class="panel-body" style="display:flex;align-items:center;gap:12px">' +
+        '<span class="tint tint-ok">✓</span><div><strong>لا توجد تنبيهات.</strong>' +
+        '<div style="color:var(--muted);font-size:.85rem">كل العقود والتصنيفات سارية ضمن نطاقك.</div></div>' +
+      '</div></div>';
+    }
+
+    html += '<div class="panel"><div class="panel-header">' +
+      '<h2 class="panel-title"><span class="tint tint-info">◫</span> توزيع الحالات</h2></div>' +
+      '<div class="panel-body"><div class="stats" style="margin:0">' +
+        stat(c.active, 'على رأس العمل') +
+        stat(c.resigned, 'مستقيل') +
+        stat(c.terminated, 'طي القيد') +
+        stat(c.delegated, 'إيفاد') +
+        stat(c.total, 'إجمالي السجلات') +
+      '</div></div></div>';
+
+    render(html);
+  }).catch(fail);
+}
+
+function stat(n, label) {
+  return '<div class="stat"><div class="n">' + esc(n == null ? 0 : n) + '</div>' +
+    '<div class="t">' + esc(label) + '</div></div>';
+}
+
+function alertCard(title, items, severity, dateLabel) {
+  if (!items || !items.length) return '';
+  var rows = items.slice(0, 5).map(function (it) {
+    return '<li><span>' + esc(it.name) + '</span><span class="d">' + esc(it.date) + '</span></li>';
+  }).join('');
+  var more = items.length > 5
+    ? '<a class="alert-more" onclick="go(\'employees\')">عرض الكل (' + items.length + ')</a>'
+    : '';
+  return '<div class="alert-card sev-' + severity + '">' +
+    '<div class="ah"><strong>' + esc(title) + '</strong>' +
+    '<span class="alert-count">' + items.length + '</span></div>' +
+    '<ul>' + rows + '</ul>' + more + '</div>';
+}
+
+/* ══════════════ سجل الموظفين ══════════════ */
+
+function pageEmployees() {
+  busy('جارٍ تحميل السجل…');
+  call('apiListEmployees', STATE.filters).then(function (d) {
+    var html = '<div class="panel"><div class="panel-header">' +
+      '<h2 class="panel-title"><span class="tint tint-brand">☰</span> البحث والتصفية</h2>' +
+      '<div class="actions">' +
+        '<button class="btn btn-primary btn-sm" onclick="go(\'employee-form\')">＋ إضافة موظف</button>' +
+        '<button class="btn btn-ghost btn-sm" id="btnExport">⤓ تصدير Excel</button>' +
+      '</div></div>' +
+      '<div class="panel-body"><div class="filters">' +
+        '<div class="field"><label for="fSearch">بحث</label>' +
+          '<input type="search" id="fSearch" placeholder="الاسم أو رقم الهوية أو الرقم الوظيفي" value="' + esc(STATE.filters.search || '') + '"></div>' +
+        '<div class="field"><label for="fStatus">الحالة</label>' +
+          selectHtml('fStatus', REF.choices.status, STATE.filters.status, 'كل الحالات') + '</div>' +
+        (ME.isAdmin
+          ? '<div class="field"><label for="fWorkplace">المنشأة</label>' +
+            selectHtml('fWorkplace', REF.workplaces, STATE.filters.workplace, 'كل المنشآت') + '</div>'
+          : '') +
+        '<div class="field" style="flex:0 0 auto"><label>&nbsp;</label>' +
+          '<button class="btn btn-primary" id="btnFilter">تطبيق</button></div>' +
+      '</div></div></div>';
+
+    html += '<div class="panel"><div class="panel-header">' +
+      '<h2 class="panel-title"><span class="tint tint-ok">✓</span> النتائج</h2>' +
+      '<span class="ref-count">' + d.total + ' سجلاً — ' + esc(d.scope) + '</span></div>';
+
+    if (!d.employees.length) {
+      html += '<div class="empty">لا توجد سجلات مطابقة.</div></div>';
+    } else {
+      html += '<div class="table-wrap"><table><thead><tr>' +
+        '<th>الاسم</th><th>الرقم الوظيفي</th><th>رقم الهوية</th><th>المنشأة</th>' +
+        '<th>القسم</th><th>الحالة</th><th>نهاية العقد</th><th>التصنيف</th><th></th>' +
+      '</tr></thead><tbody>';
+      d.employees.forEach(function (e) {
+        html += '<tr>' +
+          '<td><strong>' + esc(e.fullName) + '</strong></td>' +
+          '<td class="num">' + esc(e.employeeNumber || '—') + '</td>' +
+          '<td class="num">' + esc(e.nationalId || '—') + '</td>' +
+          '<td>' + esc(e.workplace || '—') + '</td>' +
+          '<td>' + esc(e.department || '—') + '</td>' +
+          '<td>' + statusBadge(e.status) + '</td>' +
+          '<td class="num">' + esc(e.contractEnd || '—') + '</td>' +
+          '<td>' + (e.isClassified === 'مصنف'
+            ? '<span class="badge badge-info">مصنف</span>'
+            : '<span class="badge badge-muted">غير مصنف</span>') + '</td>' +
+          '<td><div class="ops" style="display:flex;gap:5px">' +
+            '<button class="icon-btn" title="تعديل" onclick="go(\'employee-form\',{employeeId:' + e.id + '})">✎</button>' +
+            '<button class="icon-btn danger" title="نقل للأرشيف" onclick="askArchive(' + e.id + ',\'' + esc(e.fullName).replace(/'/g, '&#39;') + '\')">⌸</button>' +
+          '</div></td>' +
+        '</tr>';
+      });
+      html += '</tbody></table></div></div>';
+    }
+    render(html);
+
+    document.getElementById('btnFilter').onclick = function () {
+      STATE.filters = {
+        search: val('fSearch'), status: val('fStatus'),
+        workplace: ME.isAdmin ? val('fWorkplace') : ''
+      };
+      pageEmployees();
+    };
+    document.getElementById('fSearch').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') document.getElementById('btnFilter').click();
+    });
+    document.getElementById('btnExport').onclick = function () {
+      var btn = this; btn.disabled = true; btn.textContent = 'جارٍ التجهيز…';
+      call('apiExportEmployees', STATE.filters).then(function (file) {
+        downloadFile(file);
+        toast('تم تصدير ' + file.count + ' سجلاً.', 'ok');
+      }).catch(fail).then(function () {
+        btn.disabled = false; btn.textContent = '⤓ تصدير Excel';
+      });
+    };
+  }).catch(fail);
+}
+
+function statusBadge(status) {
+  var map = { 'نشط': 'badge-ok', 'مستقيل': 'badge-muted', 'طي القيد': 'badge-danger', 'إيفاد': 'badge-warn' };
+  return '<span class="badge ' + (map[status] || 'badge-muted') + '">' + esc(status) + '</span>';
+}
+
+/** نافذة سبب النقل للأرشيف — السبب إلزامي. */
+function askArchive(id, name) {
+  modal('نقل ' + name + ' للأرشيف',
+    '<div class="field"><label for="arReason">سبب النقل <span class="req">*</span></label>' +
+    '<textarea id="arReason" maxlength="' + REF.limits.archiveReasonMax + '" ' +
+    'placeholder="استقالة، نقل، انتهاء عقد…"></textarea>' +
+    '<span class="hint">السبب إلزامي ويُحفظ في سجل النشاطات.</span></div>',
+    'نقل للأرشيف',
+    function (close) {
+      var reason = val('arReason');
+      if (!reason) { toast('يجب كتابة سبب النقل للأرشيف.', 'error'); return false; }
+      call('apiArchiveEmployee', id, reason).then(function (r) {
+        close(); toast(r.message, 'ok'); pageEmployees();
+      }).catch(fail);
+    }, true);
+}
+
+/* ══════════════ نموذج الموظف ══════════════ */
+
+function pageEmployeeForm() {
+  var id = STATE.employeeId;
+  if (!id) return renderEmployeeForm(null);
+  busy('جارٍ تحميل بيانات الموظف…');
+  call('apiGetEmployee', id).then(function (e) { renderEmployeeForm(e); }).catch(fail);
+}
+
+function renderEmployeeForm(e) {
+  var isEdit = !!e;
+  var v = e || {
+    status: 'نشط', isClassified: 'غير مصنف', hasSubSpecialty: 'لا',
+    nationality: REF.nationalities.indexOf('سعودي') !== -1 ? 'سعودي' : '',
+    workplace: ME.isAdmin ? '' : ME.scope
+  };
+
+  var html = '<div class="panel"><div class="panel-header">' +
+    '<h2 class="panel-title"><span class="tint tint-brand">' + (isEdit ? '✎' : '＋') + '</span> ' +
+    (isEdit ? 'تعديل بيانات: ' + esc(v.fullName) : 'تسجيل موظف جديد') + '</h2>' +
+    '<button class="btn btn-ghost btn-sm" onclick="go(\'employees\')">↩ رجوع للسجل</button>' +
+    '</div><div class="panel-body">';
+
+  html += '<fieldset><legend>البيانات الشخصية</legend><div class="grid">' +
+    field('الاسم الرباعي', '<input type="text" id="fName" value="' + esc(v.fullName) + '">', true) +
+    field('رقم الهوية / الإقامة', '<input type="text" id="fNid" class="num" value="' + esc(v.nationalId) + '">') +
+    field('الرقم الوظيفي', '<input type="text" id="fNum" class="num" value="' + esc(v.employeeNumber) + '">') +
+    field('الجنسية', selectHtml('fNationality', REF.nationalities, v.nationality, '— اختر الجنسية —')) +
+    field('تاريخ الميلاد', '<input type="date" id="fDob" max="' + esc(REF.limits.maxDob) + '" value="' + esc(v.dob) + '">' +
+      '<span class="hint">يجب أن يكون العمر أكبر من ' + (REF.limits.minAge - 1) + ' عاماً.</span>') +
+    field('الجنس', selectHtml('fGender', REF.choices.gender, v.gender), true) +
+    field('رقم الجوال', '<input type="tel" id="fMobile" class="num" value="' + esc(v.mobile) + '">') +
+  '</div></fieldset>';
+
+  html += '<fieldset><legend>موقع العمل</legend><div class="grid">' +
+    field('نوع المنشأة', selectHtml('fWType', REF.choices.workplaceType, v.workplaceType)) +
+    field('التفرغ', selectHtml('fTimeType', REF.choices.timeType, v.timeType)) +
+    field('المنشأة الحالية', ME.isAdmin
+      ? selectHtml('fWorkplace', REF.workplaces, v.workplace)
+      : '<input type="text" id="fWorkplace" value="' + esc(ME.scope) + '" readonly>', true) +
+    field('القسم', selectHtml('fDept', REF.departments, v.department)) +
+    field('حالة الموظف', selectHtml('fStatus2', REF.choices.status, v.status, null), true) +
+  '</div></fieldset>';
+
+  html += '<fieldset><legend>التخصص</legend><div class="grid">' +
+    field('التخصص العام', selectHtml('fGSpec', REF.generalSpecialties, v.generalSpecialty)) +
+    field('هل يوجد تخصص دقيق؟', selectHtml('fHasSub', REF.choices.yesNo, v.hasSubSpecialty, null)) +
+    '<div class="field" id="boxSubSpec">' +
+      '<label>التخصص الدقيق <span class="req">*</span></label>' +
+      selectHtml('fSubSpec', REF.subSpecialties, v.subSpecialty) +
+    '</div>' +
+  '</div></fieldset>';
+
+  html += '<fieldset><legend>التصنيف المهني</legend><div class="grid">' +
+    field('حالة التصنيف', selectHtml('fClassified', REF.choices.classification, v.isClassified, null)) +
+    '<div class="field" id="boxClassNum"><label>رقم تصنيف الموظف <span class="req">*</span></label>' +
+      '<input type="text" id="fClassNum" value="' + esc(v.classificationNumber) + '"></div>' +
+    '<div class="field" id="boxClassExp"><label>تاريخ انتهاء التصنيف <span class="req">*</span></label>' +
+      '<input type="date" id="fClassExp" value="' + esc(v.classificationExpiry) + '"></div>' +
+  '</div></fieldset>';
+
+  html += '<fieldset><legend>العقد والكادر</legend><div class="grid">' +
+    field('فئة الموظف', selectHtml('fEmpType', REF.choices.employeeType, v.employeeType) +
+      '<span class="hint">«خدمة مدنية» لا عقد لها، فتختفي تواريخه.</span>') +
+    field('فئة الموظف (الكادر)', selectHtml('fCategory', REF.choices.category, v.category)) +
+    field('المسمى الوظيفي بالعقد', '<input type="text" id="fJobTitle" value="' + esc(v.jobTitle) + '">') +
+    '<div class="field" id="boxStart"><label>تاريخ بداية العقد</label>' +
+      '<input type="date" id="fStart" value="' + esc(v.contractStart) + '"></div>' +
+    '<div class="field" id="boxEnd"><label>تاريخ نهاية العقد <span class="req">*</span></label>' +
+      '<input type="date" id="fEnd" value="' + esc(v.contractEnd) + '"></div>' +
+  '</div></fieldset>';
+
+  html += '<fieldset><legend>التكليف الإداري</legend><div class="grid">' +
+    '<div class="field"><label>&nbsp;</label><div class="check">' +
+      '<input type="checkbox" id="fAdminAssigned"' + (v.isAdminAssigned ? ' checked' : '') + '>' +
+      '<label for="fAdminAssigned">يوجد تكليف إداري</label></div></div>' +
+    '<div class="field wide" id="boxAdminDetails"><label>تفاصيل العمل الإداري</label>' +
+      '<textarea id="fAdminDetails">' + esc(v.adminWorkDetails) + '</textarea></div>' +
+  '</div></fieldset>';
+
+  html += '<div class="actions"><button class="btn btn-primary" id="btnSave">' +
+    (isEdit ? '✓ حفظ التعديلات' : '✓ حفظ الموظف') + '</button>' +
+    '<button class="btn btn-ghost" onclick="go(\'employees\')">إلغاء</button></div>';
+
+  html += '</div></div>';
+  render(html);
+
+  bindConditionals();
+  document.getElementById('btnSave').onclick = function () { saveEmployee(e ? e.id : null, this); };
+}
+
+function field(label, control, required) {
+  return '<div class="field"><label>' + esc(label) +
+    (required ? ' <span class="req">*</span>' : '') + '</label>' + control + '</div>';
+}
+
+/**
+ * إظهار الحقول المشروطة وإخفاؤها.
+ * الإخفاء تيسير للمُدخِل لا تحقّق: الخادم يعيد الفحص عند الحفظ، فتصمد
+ * القاعدة حتى لو أُرسل الطلب من خارج هذه الصفحة.
+ */
+function bindConditionals() {
+  function toggle(boxId, show) {
+    var box = document.getElementById(boxId);
+    if (box) box.style.display = show ? '' : 'none';
+  }
+  function syncSub() { toggle('boxSubSpec', val('fHasSub') === 'نعم'); }
+  function syncClass() {
+    var on = val('fClassified') === 'مصنف';
+    toggle('boxClassNum', on); toggle('boxClassExp', on);
+  }
+  function syncContract() {
+    var civil = val('fEmpType') === 'خدمة مدنية';
+    toggle('boxStart', !civil); toggle('boxEnd', !civil);
+  }
+  function syncAdmin() { toggle('boxAdminDetails', val('fAdminAssigned') === true); }
+
+  document.getElementById('fHasSub').onchange = syncSub;
+  document.getElementById('fClassified').onchange = syncClass;
+  document.getElementById('fEmpType').onchange = syncContract;
+  document.getElementById('fAdminAssigned').onchange = syncAdmin;
+  syncSub(); syncClass(); syncContract(); syncAdmin();
+}
+
+function saveEmployee(id, btn) {
+  var payload = {
+    'الاسم الرباعي': val('fName'),
+    'رقم الهوية': val('fNid'),
+    'الرقم الوظيفي': val('fNum'),
+    'الجنسية': val('fNationality'),
+    'تاريخ الميلاد': val('fDob'),
+    'الجنس': val('fGender'),
+    'رقم الجوال': val('fMobile'),
+    'نوع المنشأة': val('fWType'),
+    'التفرغ': val('fTimeType'),
+    'المنشأة الحالية': val('fWorkplace'),
+    'القسم': val('fDept'),
+    'حالة الموظف': val('fStatus2'),
+    'التخصص العام': val('fGSpec'),
+    'يوجد تخصص دقيق': val('fHasSub'),
+    'التخصص الدقيق': val('fSubSpec'),
+    'حالة التصنيف': val('fClassified'),
+    'رقم التصنيف': val('fClassNum'),
+    'تاريخ انتهاء التصنيف': val('fClassExp'),
+    'فئة الموظف': val('fEmpType'),
+    'فئة الكادر': val('fCategory'),
+    'المسمى الوظيفي': val('fJobTitle'),
+    'تاريخ بداية العقد': val('fStart'),
+    'تاريخ نهاية العقد': val('fEnd'),
+    'مكلف بعمل إداري': val('fAdminAssigned'),
+    'تفاصيل العمل الإداري': val('fAdminDetails')
+  };
+
+  btn.disabled = true; btn.textContent = 'جارٍ الحفظ…';
+  var promise = id ? call('apiUpdateEmployee', id, payload) : call('apiCreateEmployee', payload);
+  promise.then(function (r) {
+    toast(r.message, 'ok');
+    go('employees');
+  }).catch(function (err) {
+    fail(err);
+    btn.disabled = false; btn.textContent = id ? '✓ حفظ التعديلات' : '✓ حفظ الموظف';
+  });
+}
+
+/* ══════════════ الإجازات ══════════════ */
+
+function pageLeaves() {
+  busy('جارٍ تحميل الإجازات…');
+  call('apiListLeaves').then(function (d) {
+    var html = '<div class="panel"><div class="panel-header">' +
+      '<h2 class="panel-title"><span class="tint tint-info">◷</span> الإجازات الجارية</h2>' +
+      '<button class="btn btn-primary btn-sm" onclick="go(\'leave-form\')">＋ تسجيل إجازة</button></div>' +
+      leaveTable(d.active, true) + '</div>';
+
+    html += '<div class="panel"><div class="panel-header">' +
+      '<h2 class="panel-title"><span class="tint tint-brand">↺</span> الإجازات المنتهية</h2>' +
+      '<span class="ref-count">' + d.history.length + '</span></div>' +
+      leaveTable(d.history, false) + '</div>';
+    render(html);
+  }).catch(fail);
+}
+
+function leaveTable(items, editable) {
+  if (!items.length) return '<div class="empty">لا توجد إجازات.</div>';
+  var html = '<div class="table-wrap"><table><thead><tr>' +
+    '<th>الموظف</th><th>النوع</th><th>من</th><th>إلى</th><th>المدة</th><th>ملاحظات</th>' +
+    (editable ? '<th></th>' : '') + '</tr></thead><tbody>';
+  items.forEach(function (l) {
+    html += '<tr><td><strong>' + esc(l.employeeName) + '</strong></td>' +
+      '<td><span class="badge badge-info">' + esc(l.leaveType) + '</span></td>' +
+      '<td class="num">' + esc(l.startDate) + '</td>' +
+      '<td class="num">' + esc(l.endDate) + '</td>' +
+      '<td class="num">' + esc(l.days) + ' يوم</td>' +
+      '<td>' + esc(l.notes || '—') + '</td>';
+    if (editable) {
+      html += '<td><div style="display:flex;gap:5px">' +
+        '<button class="icon-btn" title="تعديل" onclick="go(\'leave-form\',{leaveId:' + l.id + '})">✎</button>' +
+        '<button class="icon-btn danger" title="حذف" onclick="askDeleteLeave(' + l.id + ')">🗑</button>' +
+      '</div></td>';
+    }
+    html += '</tr>';
+  });
+  return html + '</tbody></table></div>';
+}
+
+function askDeleteLeave(id) {
+  confirmDanger('حذف الإجازة', 'سيُحذف سجل الإجازة نهائياً. هل تريد المتابعة؟', 'حذف', function () {
+    call('apiDeleteLeave', id).then(function (r) {
+      toast(r.message, 'ok'); pageLeaves();
+    }).catch(fail);
+  });
+}
+
+function pageLeaveForm() {
+  busy('جارٍ التحميل…');
+  var tasks = [call('apiLeaveEmployeeOptions')];
+  if (STATE.leaveId) tasks.push(call('apiGetLeave', STATE.leaveId));
+
+  Promise.all(tasks).then(function (res) {
+    var employees = res[0];
+    var l = res[1] || {};
+    var isEdit = !!STATE.leaveId;
+
+    var empOptions = employees.map(function (e) { return { value: e.id, label: e.name }; });
+    var html = '<div class="panel"><div class="panel-header">' +
+      '<h2 class="panel-title"><span class="tint tint-info">◷</span> ' +
+      (isEdit ? 'تعديل إجازة' : 'تسجيل إجازة جديدة') + '</h2>' +
+      '<button class="btn btn-ghost btn-sm" onclick="go(\'leaves\')">↩ رجوع</button></div>' +
+      '<div class="panel-body"><div class="grid">' +
+        field('الموظف', selectHtml('lEmp', empOptions, l.employeeId), true) +
+        field('نوع الإجازة', selectHtml('lType', REF.choices.leaveTypes, l.leaveType), true) +
+        field('تاريخ البداية', '<input type="date" id="lStart" value="' + esc(l.startDate) + '">', true) +
+        field('تاريخ النهاية', '<input type="date" id="lEnd" value="' + esc(l.endDate) + '">', true) +
+        '<div class="field wide"><label>ملاحظات</label><textarea id="lNotes">' + esc(l.notes) + '</textarea></div>' +
+      '</div><div class="actions" style="margin-top:16px">' +
+        '<button class="btn btn-primary" id="btnSaveLeave">✓ حفظ</button>' +
+        '<button class="btn btn-ghost" onclick="go(\'leaves\')">إلغاء</button>' +
+      '</div></div></div>';
+    render(html);
+
+    document.getElementById('btnSaveLeave').onclick = function () {
+      var payload = {
+        employeeId: val('lEmp'), leaveType: val('lType'),
+        startDate: val('lStart'), endDate: val('lEnd'), notes: val('lNotes')
+      };
+      this.disabled = true; this.textContent = 'جارٍ الحفظ…';
+      var btn = this;
+      var p = isEdit ? call('apiUpdateLeave', STATE.leaveId, payload) : call('apiCreateLeave', payload);
+      p.then(function (r) { toast(r.message, 'ok'); go('leaves'); })
+       .catch(function (err) { fail(err); btn.disabled = false; btn.textContent = '✓ حفظ'; });
+    };
+  }).catch(fail);
+}
+
+/* ══════════════ الأرشيف ══════════════ */
+
+function pageArchive() {
+  busy('جارٍ تحميل الأرشيف…');
+  call('apiListArchive').then(function (d) {
+    var html = '<div class="panel"><div class="panel-header">' +
+      '<h2 class="panel-title"><span class="tint tint-warn">⌸</span> الموظفون المؤرشفون</h2>' +
+      '<span class="ref-count">' + d.total + ' سجلاً — ' + esc(d.scope) + '</span></div>';
+
+    if (!d.employees.length) {
+      html += '<div class="empty">الأرشيف فارغ.</div></div>';
+    } else {
+      html += '<div class="table-wrap"><table><thead><tr>' +
+        '<th>الاسم</th><th>الرقم الوظيفي</th><th>المنشأة</th><th>سبب النقل</th><th></th>' +
+        '</tr></thead><tbody>';
+      d.employees.forEach(function (e) {
+        html += '<tr><td><strong>' + esc(e.fullName) + '</strong></td>' +
+          '<td class="num">' + esc(e.employeeNumber || '—') + '</td>' +
+          '<td>' + esc(e.workplace || '—') + '</td>' +
+          '<td>' + esc(e.archiveReason || '—') + '</td>' +
+          '<td><div style="display:flex;gap:5px">' +
+            '<button class="icon-btn" title="استعادة" onclick="askRestore(' + e.id + ')">↩</button>' +
+            (ME.isAdmin
+              ? '<button class="icon-btn danger" title="حذف نهائي" onclick="askHardDelete(' + e.id + ',\'' + esc(e.fullName).replace(/'/g, '&#39;') + '\')">🗑</button>'
+              : '') +
+          '</div></td></tr>';
+      });
+      html += '</tbody></table></div></div>';
+    }
+    render(html);
+  }).catch(fail);
+}
+
+function askRestore(id) {
+  confirmDanger('استعادة الموظف', 'سيعود الموظف إلى السجل النشط، ويُفرَّغ سبب الأرشفة (نصّه محفوظ في سجل النشاطات).', 'استعادة', function () {
+    call('apiRestoreEmployee', id).then(function (r) {
+      toast(r.message, 'ok'); pageArchive();
+    }).catch(fail);
+  });
+}
+
+function askHardDelete(id, name) {
+  confirmDanger('حذف ' + name + ' نهائياً',
+    'سيُمحى السجل وإجازاته من قاعدة البيانات نهائياً، ولا يمكن التراجع عن ذلك.',
+    'حذف نهائي', function () {
+      call('apiHardDeleteEmployee', id).then(function (r) {
+        toast(r.message, 'ok'); pageArchive();
+      }).catch(fail);
+    });
+}
+
+/* ══════════════ المستخدمون ══════════════ */
+
+function pageUsers() {
+  busy('جارٍ تحميل الحسابات…');
+  call('apiListUsers').then(function (users) {
+    var html = '<div class="panel"><div class="panel-header">' +
+      '<h2 class="panel-title"><span class="tint tint-brand">⚿</span> حسابات المستخدمين</h2>' +
+      '<button class="btn btn-primary btn-sm" onclick="askUser(null)">＋ إضافة مستخدم</button></div>' +
+      '<div class="panel-body" style="padding-bottom:0">' +
+      '<p class="hint" style="margin-top:0">الدخول بحساب Google — لا تُخزَّن كلمات مرور في النظام.</p></div>';
+
+    html += '<div class="table-wrap"><table><thead><tr>' +
+      '<th>البريد الإلكتروني</th><th>الاسم</th><th>الصلاحية</th><th>المنشأة</th><th>الحالة</th><th></th>' +
+      '</tr></thead><tbody>';
+    users.forEach(function (u) {
+      html += '<tr><td class="num">' + esc(u.email) + (u.isSelf ? ' <span class="badge badge-info">أنت</span>' : '') + '</td>' +
+        '<td>' + esc(u.name) + '</td>' +
+        '<td><span class="badge ' + (u.role === 'admin' ? 'badge-danger' : 'badge-muted') + '">' + esc(u.roleLabel) + '</span></td>' +
+        '<td>' + esc(u.workplace || 'الإدارة العامة') + '</td>' +
+        '<td>' + (u.active ? '<span class="badge badge-ok">مفعَّل</span>' : '<span class="badge badge-muted">معطَّل</span>') + '</td>' +
+        '<td><div style="display:flex;gap:5px">' +
+          '<button class="icon-btn" title="تعديل" onclick=\'askUser(' + JSON.stringify(u).replace(/'/g, '&#39;') + ')\'>✎</button>' +
+          (u.isSelf ? '' : '<button class="icon-btn danger" title="حذف" onclick="askDeleteUser(' + u.id + ')">🗑</button>') +
+        '</div></td></tr>';
+    });
+    html += '</tbody></table></div></div>';
+    render(html);
+  }).catch(fail);
+}
+
+function askUser(u) {
+  var isEdit = !!u;
+  var body =
+    '<div class="field"><label>البريد الإلكتروني (حساب Google) <span class="req">*</span></label>' +
+      '<input type="email" id="uEmail" value="' + esc(isEdit ? u.email : '') + '" placeholder="name@example.com"></div>' +
+    '<div class="field" style="margin-top:12px"><label>الاسم</label>' +
+      '<input type="text" id="uName" value="' + esc(isEdit ? u.name : '') + '"></div>' +
+    '<div class="field" style="margin-top:12px"><label>الصلاحية <span class="req">*</span></label>' +
+      selectHtml('uRole', REF.choices.roles, isEdit ? u.role : 'branch', null) + '</div>' +
+    '<div class="field" style="margin-top:12px" id="uWpBox"><label>المنشأة التابع لها <span class="req">*</span></label>' +
+      selectHtml('uWorkplace', REF.workplaces, isEdit ? u.workplace : '') + '</div>' +
+    '<div class="check" style="margin-top:14px"><input type="checkbox" id="uActive"' +
+      (!isEdit || u.active ? ' checked' : '') + '><label for="uActive">الحساب مفعَّل</label></div>';
+
+  modal(isEdit ? 'تعديل المستخدم' : 'إضافة مستخدم', body, isEdit ? 'حفظ' : 'إنشاء', function (close) {
+    var payload = {
+      email: val('uEmail'), name: val('uName'), role: val('uRole'),
+      workplace: val('uRole') === 'admin' ? '' : val('uWorkplace'),
+      active: val('uActive') === true
+    };
+    var p = isEdit ? call('apiUpdateUser', u.id, payload) : call('apiCreateUser', payload);
+    p.then(function (r) { close(); toast(r.message, 'ok'); pageUsers(); }).catch(fail);
+    return false;
+  });
+
+  function syncRole() {
+    document.getElementById('uWpBox').style.display = val('uRole') === 'admin' ? 'none' : '';
+  }
+  document.getElementById('uRole').onchange = syncRole;
+  syncRole();
+}
+
+function askDeleteUser(id) {
+  confirmDanger('حذف المستخدم', 'سيفقد هذا الحساب صلاحية الدخول للنظام.', 'حذف', function () {
+    call('apiDeleteUser', id).then(function (r) {
+      toast(r.message, 'ok'); pageUsers();
+    }).catch(fail);
+  });
+}
+
+/* ══════════════ الإعدادات ══════════════ */
+
+var SETTING_LABELS = {
+  workplace: 'المنشآت', department: 'الأقسام',
+  general_specialty: 'التخصص العام', sub_specialty: 'التخصص الدقيق',
+  nationality: 'الجنسيات'
+};
+
+function pageSettings() {
+  busy('جارٍ تحميل الإعدادات…');
+  call('apiListSettings').then(function (data) {
+    var html = '<div class="ref-grid">';
+    ['workplace', 'department', 'general_specialty', 'sub_specialty'].forEach(function (key) {
+      html += refPanel(key, data[key], false);
+    });
+    html += '</div>';
+    // الجنسيات بالمئات، فتأخذ صفاً كاملاً وحقل بحث بدل تمرير طويل.
+    html += refPanel('nationality', data.nationality, true);
+    render(html);
+    bindNationalitySearch();
+  }).catch(fail);
+}
+
+function refPanel(key, items, wide) {
+  var html = '<div class="panel"' + (wide ? '' : ' style="margin-bottom:0"') + '>' +
+    '<div class="panel-header"><h2 class="panel-title">' +
+      '<span class="tint tint-brand">◆</span> ' + esc(SETTING_LABELS[key]) +
+      ' <span class="ref-count">(' + items.length + ')</span></h2>' +
+    '<button class="icon-btn" title="إضافة" onclick="askAddSetting(\'' + key + '\')">＋</button></div>';
+
+  if (wide) {
+    html += '<div class="ref-search"><input type="search" id="natSearch" ' +
+      'placeholder="ابحث في الجنسيات…" autocomplete="off"></div>';
+  }
+
+  html += '<ul class="ref-list"' + (wide ? ' id="natList"' : '') + '>';
+  if (!items.length) {
+    html += '<li class="empty" style="padding:24px">لا توجد بيانات</li>';
+  } else {
+    items.forEach(function (it) {
+      var safeName = esc(it.name).replace(/'/g, '&#39;');
+      html += '<li class="ref-item" data-name="' + esc(it.name) + '">' +
+        '<span class="nm">' + esc(it.name) + '</span>' +
+        '<span class="ops">' +
+          '<button class="icon-btn" title="إعادة تسمية" onclick="askRenameSetting(\'' + key + '\',' + it.id + ',\'' + safeName + '\')">✎</button>' +
+          '<button class="icon-btn danger" title="حذف" onclick="askDeleteSetting(\'' + key + '\',' + it.id + ',\'' + safeName + '\')">🗑</button>' +
+        '</span></li>';
+    });
+  }
+  if (wide) html += '<li class="empty" id="natNoResult" hidden style="padding:20px">لا توجد جنسية بهذا الاسم</li>';
+  return html + '</ul></div>';
+}
+
+/** تصفية الجنسيات: القائمة بالمئات، فالتمرير وحده لا يكفي. */
+function bindNationalitySearch() {
+  var search = document.getElementById('natSearch');
+  var list = document.getElementById('natList');
+  var none = document.getElementById('natNoResult');
+  if (!search || !list) return;
+  search.addEventListener('input', function () {
+    var term = search.value.trim();
+    var shown = 0;
+    list.querySelectorAll('.ref-item').forEach(function (item) {
+      var match = !term || item.dataset.name.indexOf(term) !== -1;
+      item.hidden = !match;
+      if (match) shown++;
+    });
+    if (none) none.hidden = shown !== 0;
+  });
+}
+
+function askAddSetting(key) {
+  modal('إضافة إلى ' + SETTING_LABELS[key],
+    '<div class="field"><label>الاسم <span class="req">*</span></label>' +
+    '<input type="text" id="stName"></div>', 'إضافة', function (close) {
+      call('apiAddSettingItem', key, val('stName')).then(function (r) {
+        close(); toast(r.message, 'ok'); pageSettings();
+      }).catch(fail);
+      return false;
+    });
+}
+
+function askRenameSetting(key, id, currentName) {
+  modal('إعادة تسمية',
+    '<div class="field"><label>الاسم الجديد <span class="req">*</span></label>' +
+    '<input type="text" id="stNewName" value="' + esc(currentName) + '">' +
+    '<span class="hint">التعديل يسري على كل السجلات المرتبطة بهذا الاسم.</span></div>',
+    'حفظ', function (close) {
+      call('apiRenameSettingItem', key, id, val('stNewName')).then(function (r) {
+        close(); toast(r.message, 'ok'); pageSettings();
+      }).catch(fail);
+      return false;
+    });
+}
+
+function askDeleteSetting(key, id, name) {
+  confirmDanger('حذف «' + name + '»',
+    'لن يُحذف إن كان مرتبطاً ببيانات موظفين — سيرفض النظام العملية ويخبرك بعددهم.',
+    'حذف', function () {
+      call('apiDeleteSettingItem', key, id).then(function (r) {
+        toast(r.message, 'ok'); pageSettings();
+      }).catch(fail);
+    });
+}
+
+/* ══════════════ المطابقة ══════════════ */
+
+function pageReconcile() {
+  var html = '<div class="panel"><div class="panel-header">' +
+    '<h2 class="panel-title"><span class="tint tint-info">⇄</span> مطابقة ملف Excel بالسجلات</h2>' +
+    '<button class="btn btn-ghost btn-sm" id="btnTemplate">⤓ تنزيل القالب الفارغ</button></div>' +
+    '<div class="panel-body">' +
+      '<p class="hint" style="margin-top:0">عملية للقراءة فقط — لا تُنشئ ولا تُعدّل ولا تحذف أي سجل. ' +
+      'الملف لا يُحفظ: يُقرأ ثم يُحذف فوراً. يُقبل ‎.xlsx‎ فقط بحد أقصى ٥ ميجابايت.</p>' +
+      '<div class="grid"><div class="field wide"><label>ملف Excel</label>' +
+      '<input type="file" id="rcFile" accept=".xlsx"></div></div>' +
+      '<div class="actions" style="margin-top:14px">' +
+      '<button class="btn btn-primary" id="btnReconcile">⇄ بدء المطابقة</button></div>' +
+    '</div></div><div id="rcReport"></div>';
+  render(html);
+
+  document.getElementById('btnTemplate').onclick = function () {
+    var btn = this; btn.disabled = true;
+    call('apiReconcileTemplate').then(downloadFile).catch(fail)
+      .then(function () { btn.disabled = false; });
+  };
+
+  document.getElementById('btnReconcile').onclick = function () {
+    var input = document.getElementById('rcFile');
+    if (!input.files || !input.files.length) {
+      toast('يرجى اختيار ملف Excel أولاً.', 'error'); return;
+    }
+    var file = input.files[0];
+    var btn = this; btn.disabled = true; btn.textContent = 'جارٍ القراءة…';
+
+    var reader = new FileReader();
+    reader.onload = function () {
+      var base64 = reader.result.split(',')[1];
+      call('apiReconcile', { fileName: file.name, mimeType: file.type, bytes: base64 })
+        .then(renderReconcileReport)
+        .catch(fail)
+        .then(function () { btn.disabled = false; btn.textContent = '⇄ بدء المطابقة'; });
+    };
+    reader.onerror = function () {
+      toast('تعذّر قراءة الملف من جهازك.', 'error');
+      btn.disabled = false; btn.textContent = '⇄ بدء المطابقة';
+    };
+    reader.readAsDataURL(file);
+  };
+}
+
+function renderReconcileReport(r) {
+  var html = '<div class="panel"><div class="panel-header">' +
+    '<h2 class="panel-title"><span class="tint tint-ok">✓</span> تقرير المطابقة</h2>' +
+    '<span class="ref-count">' + esc(r.generatedAt) + ' — ' + esc(r.scope) + '</span></div>' +
+    '<div class="panel-body"><div class="stats" style="margin:0">' +
+      stat(r.totalFileRows, 'صفوف الملف') +
+      stat(r.totalSystemRows, 'سجلات النظام') +
+      stat(r.missingInSystem.length, 'غير مسجَّل في النظام') +
+      stat(r.differences.length, 'به اختلافات') +
+      stat(r.missingInFile.length, 'غير وارد في الملف') +
+      stat(r.incomplete.length, 'سجلات ناقصة') +
+    '</div>';
+  if (r.unknownHeaders.length) {
+    html += '<p class="hint" style="margin:14px 0 0">أعمدة في الملف لم تُفهم وتُجوهلت: ' +
+      esc(r.unknownHeaders.join('، ')) + '</p>';
+  }
+  html += '</div></div>';
+
+  if (r.missingInSystem.length) {
+    html += '<div class="panel"><div class="panel-header">' +
+      '<h2 class="panel-title"><span class="tint tint-danger">＋</span> في الملف وغير مسجَّل في النظام</h2>' +
+      '<span class="ref-count">' + r.missingInSystem.length + '</span></div>' +
+      '<div class="table-wrap"><table><thead><tr><th>صف الملف</th><th>الاسم</th>' +
+      '<th>رقم الهوية</th><th>الرقم الوظيفي</th><th>المنشأة</th></tr></thead><tbody>';
+    r.missingInSystem.forEach(function (m) {
+      html += '<tr><td class="num">' + m.row + '</td><td>' + esc(m.fullName) + '</td>' +
+        '<td class="num">' + esc(m.nationalId) + '</td><td class="num">' + esc(m.employeeNumber) + '</td>' +
+        '<td>' + esc(m.workplace) + '</td></tr>';
+    });
+    html += '</tbody></table></div></div>';
+  }
+
+  if (r.differences.length) {
+    html += '<div class="panel"><div class="panel-header">' +
+      '<h2 class="panel-title"><span class="tint tint-warn">≠</span> اختلافات حقلاً بحقل</h2>' +
+      '<span class="ref-count">' + r.differences.length + '</span></div>' +
+      '<div class="table-wrap"><table><thead><tr><th>صف الملف</th><th>الموظف</th>' +
+      '<th>الحقل</th><th>في الملف</th><th>في النظام</th></tr></thead><tbody>';
+    r.differences.forEach(function (d) {
+      d.fields.forEach(function (f, i) {
+        html += '<tr>' +
+          (i === 0 ? '<td class="num" rowspan="' + d.fields.length + '">' + d.row + '</td>' +
+                     '<td rowspan="' + d.fields.length + '"><strong>' + esc(d.employeeName) + '</strong></td>' : '') +
+          '<td>' + esc(f.label) + '</td><td>' + esc(f.file) + '</td><td>' + esc(f.system) + '</td></tr>';
+      });
+    });
+    html += '</tbody></table></div></div>';
+  }
+
+  if (r.incomplete.length) {
+    html += '<div class="panel"><div class="panel-header">' +
+      '<h2 class="panel-title"><span class="tint tint-warn">⚠</span> سجلات بها حقول ناقصة</h2>' +
+      '<span class="ref-count">' + r.incomplete.length + '</span></div>' +
+      '<div class="table-wrap"><table><thead><tr><th>الموظف</th><th>الحقول الناقصة</th></tr></thead><tbody>';
+    r.incomplete.forEach(function (c) {
+      html += '<tr><td><strong>' + esc(c.employeeName) + '</strong></td>' +
+        '<td>' + esc(c.missing.join('، ')) + '</td></tr>';
+    });
+    html += '</tbody></table></div></div>';
+  }
+
+  if (r.missingInFile.length) {
+    html += '<div class="panel"><div class="panel-header">' +
+      '<h2 class="panel-title"><span class="tint tint-brand">−</span> في النظام وغير وارد في الملف</h2>' +
+      '<span class="ref-count">' + r.missingInFile.length + '</span></div>' +
+      '<div class="table-wrap"><table><thead><tr><th>الموظف</th><th>المنشأة</th></tr></thead><tbody>';
+    r.missingInFile.forEach(function (m) {
+      html += '<tr><td><strong>' + esc(m.employeeName) + '</strong></td>' +
+        '<td>' + esc(m.workplace) + '</td></tr>';
+    });
+    html += '</tbody></table></div></div>';
+  }
+
+  document.getElementById('rcReport').innerHTML = html;
+  toast('اكتملت المطابقة.', 'ok');
+}
+
+/* ══════════════ سجل النشاطات ══════════════ */
+
+function pageActivity() {
+  busy('جارٍ تحميل السجل…');
+  call('apiListActivity').then(function (d) {
+    var html = '<div class="panel"><div class="panel-header">' +
+      '<h2 class="panel-title"><span class="tint tint-brand">↺</span> آخر ' + d.days + ' يوماً</h2>' +
+      '<span class="ref-count">' + d.logs.length + ' إجراءً</span></div>';
+
+    if (!d.logs.length) {
+      html += '<div class="empty">لا توجد إجراءات مسجَّلة في هذه المدة.</div></div>';
+    } else {
+      html += '<div class="table-wrap"><table><thead><tr>' +
+        '<th>منذ</th><th>الوقت</th><th>المستخدم</th><th>الإجراء</th><th>التفاصيل</th>' +
+        '</tr></thead><tbody>';
+      d.logs.forEach(function (l) {
+        html += '<tr><td><span class="badge badge-muted">' + esc(l.daysAgo) + '</span></td>' +
+          '<td class="num">' + esc(l.when) + '</td>' +
+          '<td class="num">' + esc(l.user) + '</td>' +
+          '<td>' + actionBadge(l.actionType) + '</td>' +
+          '<td>' + esc(l.description) + '</td></tr>';
+      });
+      html += '</tbody></table></div></div>';
+    }
+    render(html);
+  }).catch(fail);
+}
+
+function actionBadge(type) {
+  var map = {
+    'إضافة': 'badge-ok', 'تعديل': 'badge-info', 'حذف': 'badge-danger',
+    'استعادة': 'badge-warn', 'نظام': 'badge-muted'
+  };
+  return '<span class="badge ' + (map[type] || 'badge-muted') + '">' + esc(type) + '</span>';
+}
+
+/* ══════════════ الإقلاع ══════════════ */
+
+function boot() {
+  document.getElementById('userName').textContent = ME.name;
+  document.getElementById('userAvatar').textContent = (ME.name || '؟').charAt(0);
+  document.getElementById('footScope').textContent = ME.scope;
+
+  if (!ME.isAdmin) {
+    document.querySelectorAll('[data-admin]').forEach(function (el) { el.remove(); });
+  }
+
+  document.querySelectorAll('#nav a').forEach(function (link) {
+    link.onclick = function () { go(link.dataset.page); };
+  });
+  document.getElementById('menuBtn').onclick = function () {
+    document.getElementById('sidebar').classList.toggle('open');
+  };
+
+  call('apiBootstrap').then(function (d) {
+    ME = d.user;
+    REF = d.reference;
+    document.getElementById('userName').textContent = ME.name;
+    document.getElementById('footScope').textContent = ME.scope;
+
+    if (ME.isAdmin) {
+      var link = document.getElementById('sheetLink');
+      link.hidden = false;
+      link.onclick = function () {
+        call('apiSpreadsheetUrl').then(function (url) { window.open(url, '_blank'); }).catch(fail);
+      };
+    }
+    go('dashboard');
+  }).catch(function (err) {
+    render('<div class="panel"><div class="panel-header">' +
+      '<h2 class="panel-title"><span class="tint tint-danger">⚠</span> تعذّر تحميل النظام</h2></div>' +
+      '<div class="panel-body"><p style="margin:0">' + esc(err.message) + '</p></div></div>');
+  });
+}
+
+window.addEventListener('DOMContentLoaded', boot);
+</script>
